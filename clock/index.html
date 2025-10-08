@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clock</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="clock"></div>
+
+    <div class="system">
+        <div class="stopwatch">
+            <div class="stopwatch-text">Stop this watch</div>
+            <button id="startBtn" onclick="startCountdown()">Start/Reset</button>
+            <button onclick="resetCountdown()">Reset</button>
+            <button onclick="addCountdown()">Add</button>
+        </div>
+
+        <!-- <div class="stopwatch">
+            <div class="stopwatch-text">Stop this watch</div>
+            <button id="startBtn" onclick="startCountdown()">Start/Reset</button>
+            <button onclick="resetCountdown()">Reset</button>
+            <button onclick="addCountdown()">Add</button>
+        </div> -->
+    </div>
+
+    <script src="main.js"></script>
+</body>
+
+</html>

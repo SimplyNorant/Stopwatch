@@ -1,42 +1,39 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap");
+
+html {
+  height: 100%;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+body {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  background-color: black;
+  font-family: "Orbitron", sans-serif;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.clock {
+  font-size: 10vh;
+  letter-spacing: 6px;
+  color: green;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.stopwatch-text {
+  font-size: 80px;
+  letter-spacing: 6px;
+  color: rgb(94, 128, 0);
 }
 
-.card {
-  padding: 2em;
-}
+button {
+  width: 500px;
+  height: 100px;
 
-.read-the-docs {
-  color: #888;
+  background-color: rgb(50, 53, 39);
+  color: rgb(94, 128, 0);
+  border-style: none;
+  cursor: pointer;
+  font-size: 50px;
 }
