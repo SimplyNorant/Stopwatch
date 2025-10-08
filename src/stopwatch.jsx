@@ -1,80 +1,35 @@
-export default function Stopwatch() {
-  const clock = document.querySelector(".clock");
-  const stopwatch = document.querySelector(".stopwatch-text");
-  const startBtn = document.getElementById("startBtn");
+import { useState, useRef } from "react";
 
-  clock.addEventListener("load", tick);
-  stopwatch.addEventListener("load", countdown);
+export default function Stopwatch() {
+  const [startTime, setStartTime] = useState(Date.now());
+  const [secondsPassed, setSecondsPassed] = useState(0);
+  const intervalRef = useRef(null);
 
   function tick() {
-    const now = new Date();
-    const h = now.getHours();
-    const m = now.getMinutes();
-    const s = now.getSeconds();
-
-    const html = `
-    <span>${h} :</span>
-    <span>${m} :</span>
-    <span>${s} </span>
-    `;
-
-    clock.innerHTML = html;
-  }
-
-  setInterval(tick, 1000);
-  // COUNTDOWN START
-  let counting,
-    started = false;
-  let seconds = (minutes = hours = 0);
-
-  function startCountdown() {
-    if (started) {
-      clearInterval(counting);
-      startBtn.innerHTML = "Start";
-      started = false;
+    if (startTime) {
+      setSecondsPassed(secondsPassed + (Date.now() - startTime) / 1000);
     } else {
-      counting = setInterval(countdown, 1000);
-      startBtn.innerHTML = "Stop";
-      started = true;
+      setStartTime(Date.now());
     }
   }
 
-  function resetCountdown() {
-    seconds = 0;
-    minutes = 0;
-    hours = 0;
-    stopwatch.innerHTML = `Time passed: ${hours} : ${minutes} : ${seconds}`;
+  function handleStart() {
+    setStartTime(Date.now());
+
+    clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(tick, 10);
   }
 
-  function countdown() {
-    seconds++;
-
-    if (seconds >= 60) {
-      minutes++;
-      seconds = 0;
-    }
-    if (minutes >= 60) {
-      hours++;
-      minutes = 0;
-    }
-    const html = `Time passed: ${hours} : ${minutes} : ${seconds}`;
-
-    stopwatch.innerHTML = html;
+  function handleStop() {
+    clearInterval(intervalRef.current);
+    setStartTime(null);
   }
-  // COUNTDOWN END
-
-  function addCountdown() {}
 
   return (
-    <div className="system">
-      <div className="stopwatch">
-        <div className="stopwatch-text">Stop this watch</div>
-        <button id="startBtn" onclick={startCountdown}>
-          Start/Reset
-        </button>
-        <button onclick={resetCountdown}>Reset</button>
-        <button onclick={addCountdown}>Add</button>
-      </div>
-    </div>
+    <>
+      <h1>Time passed: {secondsPassed.toFixed(3)}</h1>
+      <button onClick={handleStart}>Start</button>
+      <button onClick={handleStop}>Stop</button>
+    </>
   );
 }
