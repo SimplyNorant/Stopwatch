@@ -1,12 +1,10 @@
 import "./App.css";
-import Stopwatch from "./stopwatch";
-import Testing from "./Testing";
-import DeepStopwatch from "./DeepStopwatch";
+import StopwatchSystem from "./StopwatchSystem";
 
 function App() {
   return (
     <>
-      <DeepStopwatch></DeepStopwatch>
+      <StopwatchSystem></StopwatchSystem>
     </>
   );
 }

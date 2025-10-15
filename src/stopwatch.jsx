@@ -1,35 +1,55 @@
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
+import "./Stopwatch.css";
 
 export default function Stopwatch() {
-  const [startTime, setStartTime] = useState(Date.now());
-  const [secondsPassed, setSecondsPassed] = useState(0);
-  const intervalRef = useRef(null);
+  const [time, setTime] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
 
-  function tick() {
-    if (startTime) {
-      setSecondsPassed(secondsPassed + (Date.now() - startTime) / 1000);
-    } else {
-      setStartTime(Date.now());
+  useEffect(() => {
+    let intervalId;
+
+    if (isRunning) {
+      intervalId = setInterval(() => {
+        setTime((prevTime) => prevTime + 10); // Update every 10ms for milliseconds
+      }, 10);
     }
-  }
 
-  function handleStart() {
-    setStartTime(Date.now());
+    return () => clearInterval(intervalId);
+  }, [isRunning]);
 
-    clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(tick, 10);
-  }
+  const startStop = () => {
+    setIsRunning(!isRunning);
+  };
 
-  function handleStop() {
-    clearInterval(intervalRef.current);
-    setStartTime(null);
-  }
+  const reset = () => {
+    setTime(0);
+    setIsRunning(false);
+  };
+
+  const formatTime = (timeInMs) => {
+    const hours = Math.floor(timeInMs / 3600000);
+    const minutes = Math.floor((timeInMs % 3600000) / 60000);
+    const seconds = Math.floor((timeInMs % 60000) / 1000);
+    const milliseconds = Math.floor((timeInMs % 1000) / 10);
+
+    return `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}.${milliseconds
+      .toString()
+      .padStart(2, "0")}`;
+  };
 
   return (
-    <>
-      <h1>Time passed: {secondsPassed.toFixed(3)}</h1>
-      <button onClick={handleStart}>Start</button>
-      <button onClick={handleStop}>Stop</button>
-    </>
+    <div className="stopwatch">
+      <div className="display">{formatTime(time)}</div>
+      <div className="controls">
+        <button onClick={startStop} className={isRunning ? "stop" : "start"}>
+          {isRunning ? "Stop" : "Start"}
+        </button>
+        <button onClick={reset} className="reset">
+          Reset
+        </button>
+      </div>
+    </div>
   );
 }
