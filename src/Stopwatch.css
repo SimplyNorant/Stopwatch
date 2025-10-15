@@ -6,6 +6,10 @@
   margin: 0 auto;
 }
 
+.name {
+  font-size: 3rem;
+}
+
 .display {
   font-size: 3rem;
   font-weight: bold;

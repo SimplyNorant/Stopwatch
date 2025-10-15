@@ -1,4 +1,3 @@
-import "./App.css";
 import StopwatchSystem from "./StopwatchSystem";
 
 function App() {
