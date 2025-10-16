@@ -2,21 +2,8 @@ import { useState, useEffect } from "react";
 import "./Stopwatch.css";
 
 export default function StopwatchSystem() {
-  const [isOpen, setOpen] = useState(
-    JSON.parse(localStorage.getItem("is-open")) || false
-  );
-
-  const handleToggle = () => {
-    localStorage.setItem("is-open", JSON.stringify(!isOpen));
-
-    setOpen(!isOpen);
-  };
   return (
     <>
-      <div>
-        <button onClick={handleToggle}>Toggle</button>
-        {isOpen && <div>Content</div>}
-      </div>
       <Stopwatch name={"Coding"}></Stopwatch>
       <Stopwatch name={"Piano"}></Stopwatch>
     </>
@@ -24,9 +11,10 @@ export default function StopwatchSystem() {
 }
 
 function Stopwatch({ name }) {
-  const [time, setTime] = useState(0);
+  const [time, setTime] = useState(JSON.parse(localStorage.getItem(name)) || 0);
   const [isRunning, setIsRunning] = useState(false);
 
+  // Stopwatch time change
   useEffect(() => {
     let intervalId;
 
@@ -39,11 +27,17 @@ function Stopwatch({ name }) {
     return () => clearInterval(intervalId);
   }, [isRunning]);
 
+  // Saving time each time it changes
+  useEffect(() => {
+    localStorage.setItem(name, JSON.stringify(time));
+  }, [time]);
+
   const startStop = () => {
     setIsRunning(!isRunning);
   };
 
   const reset = () => {
+    localStorage.setItem(name, JSON.stringify(time));
     setTime(0);
     setIsRunning(false);
   };
