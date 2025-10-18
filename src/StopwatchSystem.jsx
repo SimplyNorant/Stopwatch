@@ -2,10 +2,21 @@ import { useState, useEffect } from "react";
 import "./Stopwatch.css";
 
 export default function StopwatchSystem() {
+  const [nameList, setNameList] = useState(["Coding", "Piano", "Training"]);
+
+  function addStopwatch() {
+    const temp = [...nameList, "1"];
+    setNameList(temp);
+  }
   return (
     <>
-      <Stopwatch name={"Coding"}></Stopwatch>
-      <Stopwatch name={"Piano"}></Stopwatch>
+      <div>
+        <button onClick={addStopwatch}>Add Stopwatch</button>
+
+        {nameList.map((el) => (
+          <Stopwatch key={el} name={el} />
+        ))}
+      </div>
     </>
   );
 }
