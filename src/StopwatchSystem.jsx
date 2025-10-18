@@ -3,16 +3,33 @@ import "./Stopwatch.css";
 
 export default function StopwatchSystem() {
   const [nameList, setNameList] = useState(["Coding", "Piano", "Training"]);
+  const [input, setInput] = useState(2);
 
   function addStopwatch() {
-    const temp = [...nameList, "1"];
-    setNameList(temp);
+    console.log(nameList.indexOf(input));
+    if (nameList.indexOf(input) === -1) {
+      const temp = [...nameList, input];
+      setNameList(temp);
+    } else {
+      console.log("There is already a Stopwatch with such name!");
+    }
   }
   return (
     <>
       <div>
         <button onClick={addStopwatch}>Add Stopwatch</button>
 
+        <form>
+          <label for="sname">Stopwatch Name:</label>
+          <br />
+          <input
+            value={input}
+            onInput={(e) => setInput(e.target.value)}
+            id="sname"
+            name="sname"
+            className="bg-white text-black"
+          />
+        </form>
         {nameList.map((el) => (
           <Stopwatch key={el} name={el} />
         ))}
