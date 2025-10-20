@@ -2,22 +2,43 @@ import { useState, useEffect } from "react";
 import "./Stopwatch.css";
 
 export default function StopwatchSystem() {
-  const [nameList, setNameList] = useState(["Coding", "Piano", "Training"]);
+  const [nameList, setNameList] = useState(
+    JSON.parse(localStorage.getItem("nameList")) || [
+      "Coding",
+      "Piano",
+      "Training",
+    ]
+  );
   const [input, setInput] = useState(2);
 
   function addStopwatch() {
     console.log(nameList.indexOf(input));
-    if (nameList.indexOf(input) === -1) {
+    if (nameList.indexOf(input) === -1 && input !== "") {
       const temp = [...nameList, input];
+      localStorage.setItem("nameList", JSON.stringify(temp));
       setNameList(temp);
     } else {
       console.log("There is already a Stopwatch with such name!");
+    }
+  }
+
+  function deleteStopwatch() {
+    const temp = [...nameList];
+    const place = temp.indexOf(input);
+    if (place !== -1) {
+      localStorage.removeItem(temp[place]);
+      temp.splice(place, 1);
+      localStorage.setItem("nameList", JSON.stringify(temp));
+      setNameList(temp);
+    } else {
+      console.log("There is no Stopwatch with such name!");
     }
   }
   return (
     <>
       <div>
         <button onClick={addStopwatch}>Add Stopwatch</button>
+        <button onClick={deleteStopwatch}>Delete Stopwatch</button>
 
         <form>
           <label for="sname">Stopwatch Name:</label>
