@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import "./Stopwatch.css";
 
 export default function StopwatchSystem() {
   const [nameList, setNameList] = useState(
@@ -37,23 +36,40 @@ export default function StopwatchSystem() {
   return (
     <>
       <div>
-        <button onClick={addStopwatch}>Add Stopwatch</button>
-        <button onClick={deleteStopwatch}>Delete Stopwatch</button>
+        <h1 className="text-center text-4xl mb-2">My Stopwatches</h1>
+        <div className="mx-auto flex flex-col items-center">
+          <button
+            className="bg-[#25FFA8] w-sm rounded mb-2 text-3xl py-5 tracking-widest border shadow-xl/20"
+            onClick={addStopwatch}
+          >
+            Add Stopwatch
+          </button>
+          <button
+            className="bg-[#FF2525] w-sm rounded mb-2 text-3xl py-5 tracking-widest border shadow-xl/20"
+            onClick={deleteStopwatch}
+          >
+            Delete Stopwatch
+          </button>
+        </div>
 
-        <form>
-          <label for="sname">Stopwatch Name:</label>
+        <form className="text-center">
+          <label className="text-3xl" htmlFor="sname">
+            Stopwatch Name:
+          </label>
           <br />
           <input
             value={input}
             onInput={(e) => setInput(e.target.value)}
             id="sname"
             name="sname"
-            className="bg-white text-black"
+            className="w-sm bg-white py-5 text-3xl text-center text-wrap"
           />
         </form>
-        {nameList.map((el) => (
-          <Stopwatch key={el} name={el} />
-        ))}
+        <div className="flex flex-col items-center gap-4">
+          {nameList.map((el) => (
+            <Stopwatch key={el} name={el} />
+          ))}
+        </div>
       </div>
     </>
   );
@@ -105,14 +121,26 @@ function Stopwatch({ name }) {
   };
 
   return (
-    <div className="stopwatch">
-      <div className="name">{name}</div>
-      <div className="display">{formatTime(time)}</div>
-      <div className="controls">
-        <button onClick={startStop} className={isRunning ? "stop" : "start"}>
+    <div className="">
+      <div className="text-3xl text-center mb-1">{name}</div>
+      <div className="bg-white text-center mb-2 text-3xl py-5 px-4 border rounded tracking-widest shadow-xl/10">
+        {formatTime(time)}
+      </div>
+      <div className="flex justify-between gap-3 text-3xl">
+        <button
+          onClick={startStop}
+          className={
+            isRunning
+              ? "bg-[#ff2525] w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10"
+              : "bg-[#75FF25] w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10"
+          }
+        >
           {isRunning ? "Stop" : "Start"}
         </button>
-        <button onClick={reset} className="reset">
+        <button
+          onClick={reset}
+          className="bg-[#FFC125] w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10"
+        >
           Reset
         </button>
       </div>
