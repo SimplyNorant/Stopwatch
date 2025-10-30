@@ -35,7 +35,7 @@ export default function StopwatchSystem() {
   }
   return (
     <>
-      <div>
+      <div className="mt-2 mb-5">
         <h1 className="text-center text-4xl mb-2">My Stopwatches</h1>
         <div className="mx-auto flex flex-col items-center">
           <button
@@ -57,13 +57,20 @@ export default function StopwatchSystem() {
             Stopwatch Name:
           </label>
           <br />
-          <input
+          {/* <input
             value={input}
             onInput={(e) => setInput(e.target.value)}
             id="sname"
             name="sname"
             className="w-sm bg-white py-5 text-3xl text-center text-wrap"
-          />
+          /> */}
+          <textarea
+            value={input}
+            onInput={(e) => setInput(e.target.value)}
+            id="sname"
+            name="sname"
+            className="w-sm bg-white py-5 text-3xl text-center text-wrap"
+          ></textarea>
         </form>
         <div className="flex flex-col items-center gap-4">
           {nameList.map((el) => (
@@ -122,7 +129,12 @@ function Stopwatch({ name }) {
 
   return (
     <div className="">
-      <div className="text-3xl text-center mb-1">{name}</div>
+      <div
+        className="text-3xl text-center mb-1 text-wrap wrap-anywhere w-80
+    "
+      >
+        {name}
+      </div>
       <div className="bg-white text-center mb-2 text-3xl py-5 px-4 border rounded tracking-widest shadow-xl/10">
         {formatTime(time)}
       </div>
