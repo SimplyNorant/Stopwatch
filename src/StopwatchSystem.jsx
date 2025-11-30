@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function StopwatchSystem() {
   const [nameList, setNameList] = useState(
@@ -8,7 +8,7 @@ export default function StopwatchSystem() {
       "Training",
     ]
   );
-  const [input, setInput] = useState(2);
+  const [input, setInput] = useState("");
 
   function addStopwatch() {
     console.log(nameList.indexOf(input));
@@ -57,13 +57,6 @@ export default function StopwatchSystem() {
             Stopwatch Name:
           </label>
           <br />
-          {/* <input
-            value={input}
-            onInput={(e) => setInput(e.target.value)}
-            id="sname"
-            name="sname"
-            className="w-sm bg-white py-5 text-3xl text-center text-wrap"
-          /> */}
           <textarea
             value={input}
             onInput={(e) => setInput(e.target.value)}
@@ -85,33 +78,55 @@ export default function StopwatchSystem() {
 function Stopwatch({ name }) {
   const [time, setTime] = useState(JSON.parse(localStorage.getItem(name)) || 0);
   const [isRunning, setIsRunning] = useState(false);
+  const intervalRef = useRef();
+  const startTimeRef = useRef(0);
+  const savedTimeRef = useRef(JSON.parse(localStorage.getItem(name)) || 0);
 
-  // Stopwatch time change
+  // Инициализация и очистка
   useEffect(() => {
-    let intervalId;
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
 
+  // Запуск/остановка секундомера
+  useEffect(() => {
     if (isRunning) {
-      intervalId = setInterval(() => {
-        setTime((prevTime) => prevTime + 10); // Update every 10ms for milliseconds
+      startTimeRef.current = Date.now() - savedTimeRef.current;
+
+      intervalRef.current = setInterval(() => {
+        const currentTime = Date.now() - startTimeRef.current;
+        setTime(currentTime);
+        savedTimeRef.current = currentTime;
+        localStorage.setItem(name, JSON.stringify(currentTime));
       }, 10);
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        localStorage.setItem(name, JSON.stringify(savedTimeRef.current));
+      }
     }
 
-    return () => clearInterval(intervalId);
-  }, [isRunning]);
-
-  // Saving time each time it changes
-  useEffect(() => {
-    localStorage.setItem(name, JSON.stringify(time));
-  }, [time]);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isRunning, name]);
 
   const startStop = () => {
     setIsRunning(!isRunning);
   };
 
   const reset = () => {
-    localStorage.setItem(name, JSON.stringify(time));
     setTime(0);
-    setIsRunning(false);
+    savedTimeRef.current = 0;
+    localStorage.setItem(name, JSON.stringify(0));
+    if (isRunning) {
+      startTimeRef.current = Date.now();
+    }
   };
 
   const formatTime = (timeInMs) => {
