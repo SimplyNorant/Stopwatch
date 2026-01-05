@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Auth } from "./auth";
+import { Auth } from "./Auth";
 import StopwatchSystem from "./StopwatchSystem";
 import supabase from "./supabase-client";
 
 function App() {
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState<any>(null);
 
   const fetchSession = async () => {
     const currentSession = await supabase.auth.getSession();

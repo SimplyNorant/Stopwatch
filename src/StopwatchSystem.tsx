@@ -1,9 +1,18 @@
 import { useState, useEffect, useRef } from "react";
 import supabase from "./supabase-client";
+import type { Session } from "@supabase/supabase-js";
 
-export default function StopwatchSystem({ session }) {
-  const [nameList, setNameList] = useState([]);
-  const [input, setInput] = useState("");
+interface Task {
+  id: number;
+  title: string;
+  description: string;
+  created_at: string;
+  image_url: string;
+}
+
+export default function StopwatchSystem({ session }: { session: Session }) {
+  const [nameList, setNameList] = useState<Task[]>([]);
+  const [input, setInput] = useState<string>("");
 
   useEffect(() => {
     fetchStopwatches();
@@ -21,7 +30,7 @@ export default function StopwatchSystem({ session }) {
           table: "tasks",
         },
         (payload) => {
-          const newTask = payload.new;
+          const newTask = payload.new as Task;
           console.log(newTask);
           setNameList((prev) => [...prev, newTask]);
         }
@@ -52,9 +61,9 @@ export default function StopwatchSystem({ session }) {
       .from("tasks")
       .select("*")
       .order("created_at", { ascending: true });
-    data.map((item) => {
-      console.log(item.title);
-    });
+    // data.map((item) => {
+    //   console.log(item.title);
+    // });
 
     if (error) {
       console.error("Whoops! While fetching: ", error.message);
@@ -106,7 +115,7 @@ export default function StopwatchSystem({ session }) {
           <br />
           <textarea
             value={input}
-            onInput={(e) => setInput(e.target.value)}
+            onInput={(e: any) => setInput(e.target.value)}
             id="sname"
             name="sname"
             className="w-sm bg-white py-5 text-3xl text-center text-wrap"
@@ -127,10 +136,18 @@ export default function StopwatchSystem({ session }) {
   );
 }
 
-function Stopwatch({ name, id, setNameList }) {
+function Stopwatch({
+  name,
+  id,
+  setNameList,
+}: {
+  name: string;
+  id: number;
+  setNameList: any;
+}) {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-  const intervalRef = useRef();
+  const intervalRef = useRef(0); // ...
   const startTimeRef = useRef(0);
   const savedTimeRef = useRef(0);
 
@@ -210,7 +227,7 @@ function Stopwatch({ name, id, setNameList }) {
     setTime(data[0].time);
   };
 
-  const changeTime = async (change) => {
+  const changeTime = async (change: number) => {
     const { error } = await supabase
       .from("tasks")
       .update({ time: change })
@@ -235,7 +252,7 @@ function Stopwatch({ name, id, setNameList }) {
     }
   };
 
-  const deleteStopwatch = async (id) => {
+  const deleteStopwatch = async (id: number) => {
     const { error } = await supabase.from("tasks").delete().eq("id", id);
 
     if (error) {
@@ -255,7 +272,7 @@ function Stopwatch({ name, id, setNameList }) {
     // }
   };
 
-  const formatTime = (timeInMs) => {
+  const formatTime = (timeInMs: number) => {
     const hours = Math.floor(timeInMs / 3600000);
     const minutes = Math.floor((timeInMs % 3600000) / 60000);
     const seconds = Math.floor((timeInMs % 60000) / 1000);
