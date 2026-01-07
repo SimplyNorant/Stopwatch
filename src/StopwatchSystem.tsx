@@ -61,9 +61,6 @@ export default function StopwatchSystem({ session }: { session: Session }) {
       .from("tasks")
       .select("*")
       .order("created_at", { ascending: true });
-    // data.map((item) => {
-    //   console.log(item.title);
-    // });
 
     if (error) {
       console.error("Whoops! While fetching: ", error.message);
@@ -118,17 +115,12 @@ export default function StopwatchSystem({ session }: { session: Session }) {
             onInput={(e: any) => setInput(e.target.value)}
             id="sname"
             name="sname"
-            className="w-sm bg-white py-5 text-3xl text-center text-wrap"
+            className="w-sm bg-white py-5 text-3xl text-center text-wrap border-2"
           ></textarea>
         </form>
         <div className="flex flex-col items-center gap-4">
           {nameList.map((el) => (
-            <Stopwatch
-              key={el.id}
-              name={el.title}
-              id={el.id}
-              setNameList={setNameList}
-            />
+            <Stopwatch key={el.id} name={el.title} id={el.id} />
           ))}
         </div>
       </div>
@@ -136,15 +128,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
   );
 }
 
-function Stopwatch({
-  name,
-  id,
-  setNameList,
-}: {
-  name: string;
-  id: number;
-  setNameList: any;
-}) {
+function Stopwatch({ name, id }: { name: string; id: number }) {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const intervalRef = useRef(0); // ...

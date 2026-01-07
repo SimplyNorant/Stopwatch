@@ -1,4 +1,3 @@
-# Dockerfile for Vite
 FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./

@@ -37,7 +37,7 @@ function App() {
           {" "}
           <button
             onClick={logout}
-            className="absolute top-2 left-2 p-2 bg-gray-300 hover:bg-gray-400 transition rounded shadow-xl/5"
+            className="sm:absolute top-2 right-2 p-2 w-full sm:w-20 bg-gray-300 hover:bg-gray-400 transition rounded shadow-xl/5"
           >
             {" "}
             Log Out
@@ -45,7 +45,9 @@ function App() {
           <StopwatchSystem session={session} />{" "}
         </>
       ) : (
-        <Auth />
+        <>
+          <Auth />
+        </>
       )}
     </>
   );
