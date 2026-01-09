@@ -1,18 +1,18 @@
 import { useState } from "react";
 import supabase from "./supabase-client";
 import { z } from "zod";
+import { Modal } from "./assets/dialog";
 
 export const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<any>(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const signUpSchema = z.object({
     email: z.email({ error: "Incorrect email!" }),
-    password: z
-      .string()
-      .min(6, { error: "Need at least 6 symbols in password!" }),
+    password: z.string().min(6, { error: "At least 6 symbols are required!" }),
   });
 
   const handleSubmit = async (e: any) => {
@@ -26,6 +26,7 @@ export const Auth = () => {
       return;
     } else {
       console.log(validation.data);
+      setErrors(false);
     }
     if (isSignUp) {
       const { error: signUpError } = await supabase.auth.signUp({
@@ -36,6 +37,8 @@ export const Auth = () => {
         console.error("Error signing up:", signUpError.message);
         return;
       }
+      // HERE
+      setIsDialogOpen(true);
     } else {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
@@ -43,6 +46,7 @@ export const Auth = () => {
       });
       if (signInError) {
         console.error("Error signing up:", signInError.message);
+        setErrors({ credentials: "Incorrect email/password" });
         return;
       }
     }
@@ -56,6 +60,7 @@ export const Auth = () => {
 
   return (
     <div className="max-w-100 mx-auto my-0 p-4 text-2xl space-y-2 text-center">
+      <Modal open={isDialogOpen} onClose={() => setIsDialogOpen(false)} />
       <h2 className="text-3xl">{isSignUp ? "Sign Up" : "Sign In"}</h2>
       <form onSubmit={handleSubmit}>
         <div className="mb-2">
@@ -86,6 +91,7 @@ export const Auth = () => {
           {errors && (
             <div className="justify-self-start text-start text-red-600">
               {errors.password?.[0]}
+              {errors.credentials}
             </div>
           )}
         </div>
