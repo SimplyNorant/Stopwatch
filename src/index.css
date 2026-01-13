@@ -3,3 +3,38 @@
 button {
   cursor: pointer;
 }
+@custom-variant dark (&:where(.dark, .dark *));
+@theme {
+  --color-primary: var(--primary);
+  --color-background: var(--background);
+  --color-secondary: var(--secondary);
+  --color-foreground: var(--foreground);
+  --color-font: var(--font);
+  --color-delete: var(--delete);
+}
+
+:root {
+  --background: hsl(0 0% 85%);
+  --foreground: hsl(0, 0%, 90%);
+  --primary: hsl(98, 100%, 57%);
+  --secondary: hsl(43, 100%, 57%);
+  --font: hsl(0, 0%, 0%);
+  --delete: hsl(0, 100%, 60%);
+}
+
+/* Dark theme */
+.dark {
+  --background: hsl(0, 0%, 15%);
+  --foreground: hsl(0, 0%, 50%);
+  --primary: hsl(98, 100%, 37%);
+  --secondary: hsl(43, 100%, 40%);
+  --font: hsl(0, 0%, 90%);
+  --delete: hsl(0, 100%, 40%);
+}
+
+/* Brand theme */
+.brand {
+  --background: 32 100% 95%;
+  --foreground: 20 14% 4%;
+  --primary: 20 90% 50%;
+}

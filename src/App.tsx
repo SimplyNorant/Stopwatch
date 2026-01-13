@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Auth } from "./Auth";
 import StopwatchSystem from "./StopwatchSystem";
 import supabase from "./supabase-client";
+import DarkModeToggle from "./assets/darkModeToggle";
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -9,6 +10,7 @@ function App() {
   const fetchSession = async () => {
     const currentSession = await supabase.auth.getSession();
     console.log(currentSession);
+    console.log(currentSession.data.session?.user.email);
     setSession(currentSession.data.session);
   };
 
@@ -34,18 +36,26 @@ function App() {
     <>
       {session ? (
         <>
-          {" "}
-          <button
-            onClick={logout}
-            className="sm:absolute top-2 right-2 p-2 w-full sm:w-20 bg-gray-300 hover:bg-gray-400 transition rounded shadow-xl/5"
-          >
-            {" "}
-            Log Out
-          </button>
-          <StopwatchSystem session={session} />{" "}
+          <div className="flex justify-end items-center gap-2 m-1">
+            <DarkModeToggle />
+            <div className="p-2 bg-foreground rounded text-font">
+              {session?.user.email}
+            </div>
+
+            <button
+              onClick={logout}
+              className="p-2 w sm:w-20 bg-gray-300 hover:bg-gray-400 transition rounded shadow-xl/5"
+            >
+              Log Out
+            </button>
+          </div>
+          <StopwatchSystem session={session} />
         </>
       ) : (
         <>
+          <div className="flex justify-end m-1">
+            <DarkModeToggle />
+          </div>
           <Auth />
         </>
       )}

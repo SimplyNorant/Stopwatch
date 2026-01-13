@@ -12,12 +12,21 @@ interface Task {
 }
 
 export default function StopwatchSystem({ session }: { session: Session }) {
+  // STOPWATCH
   const [stopwatchNameList, setStopwatchNameList] = useState<Task[]>([]);
   const [stopwatchInput, setStopwatchInput] = useState<string>("");
 
+  // TIMER
   const [timerNameList, setTimerNameList] = useState<Task[]>([]);
   const [timerInput, setTimerInput] = useState<string>("");
   const [timerDuration, setTimerDuration] = useState(0);
+  const [endSound, setEndSound] = useState("timer_finish_ringing1.mp3");
+
+  const totalSeconds = Math.floor(timerDuration / 1000);
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
 
   useEffect(() => {
     fetchStopwatches();
@@ -54,15 +63,11 @@ export default function StopwatchSystem({ session }: { session: Session }) {
         (payload) => {
           const oldTask = payload.old;
           console.log(oldTask);
-          if (oldTask.duration === 0) {
-            setStopwatchNameList((prev) =>
-              prev.filter((el) => el.id !== oldTask.id)
-            );
-          } else {
-            setTimerNameList((prev) =>
-              prev.filter((el) => el.id !== oldTask.id)
-            );
-          }
+
+          setStopwatchNameList((prev) =>
+            prev.filter((el) => el.id !== oldTask.id)
+          );
+          setTimerNameList((prev) => prev.filter((el) => el.id !== oldTask.id));
         }
       )
       .subscribe((status) => {
@@ -119,12 +124,13 @@ export default function StopwatchSystem({ session }: { session: Session }) {
 
   const addTimer = async (e: any) => {
     e.preventDefault();
+    const duration = Math.max(1, timerDuration);
     const { error } = await supabase
       .from("tasks")
       .insert({
         title: timerInput,
         email: session.user.email,
-        duration: timerDuration,
+        duration: duration,
       })
       .single();
 
@@ -137,18 +143,16 @@ export default function StopwatchSystem({ session }: { session: Session }) {
 
   return (
     <>
-      <div className="mt-2 flex flex-col lg:flex-row justify-around gap-10 lg:gap-0">
-        <div>
+      <div className="mt-2 flex flex-col lg:flex-row justify-around gap-10 lg:gap-0 text-font **:border-black">
+        <div className="flex flex-col items-center">
           {/* Stopwatches */}
           <h1 className="text-center text-4xl mb-2">My Stopwatches</h1>
-          <div className="mx-auto  items-center">
-            <button
-              className="bg-[#25FFA8] w-sm rounded mb-2 text-3xl py-5 tracking-widest border shadow-xl/20"
-              onClick={addStopwatch}
-            >
-              Add Stopwatch
-            </button>
-          </div>
+          <button
+            className="bg-primary w-sm rounded mb-2 text-3xl py-5 tracking-widest border shadow-xl/20 transition hover:-translate-y-0.5"
+            onClick={addStopwatch}
+          >
+            Add Stopwatch
+          </button>
 
           <form className="text-center">
             <label className="text-3xl" htmlFor="sname">
@@ -160,7 +164,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
               onInput={(e: any) => setStopwatchInput(e.target.value)}
               id="sname"
               name="sname"
-              className="w-sm bg-white py-5 text-3xl text-center text-wrap border-2"
+              className="w-sm py-5 text-3xl text-center text-wrap border-2 bg-foreground"
             ></textarea>
           </form>
           <div className="flex flex-col items-center gap-4">
@@ -169,13 +173,13 @@ export default function StopwatchSystem({ session }: { session: Session }) {
             ))}
           </div>
         </div>
-        <div>
+        <div className="flex flex-col items-center">
           {/* Timers */}
           <h1 className="text-center text-4xl mb-2">My Timers</h1>
 
           <form className="text-center flex flex-col">
             <button
-              className="bg-[#25FFA8] w-sm rounded mb-2 text-3xl py-5 tracking-widest border shadow-xl/20"
+              className="bg-primary w-sm rounded mb-2 text-3xl py-5 tracking-widest border shadow-xl/20 transition hover:-translate-y-0.5"
               onClick={(e: any) => addTimer(e)}
             >
               Add Timer
@@ -188,15 +192,72 @@ export default function StopwatchSystem({ session }: { session: Session }) {
               onInput={(e: any) => setTimerInput(e.target.value)}
               id="tname"
               name="tname"
-              className="w-sm bg-white py-5 text-3xl text-center text-wrap border-2"
+              className="w-sm py-5 text-3xl text-center text-wrap border-2 bg-foreground"
             ></textarea>
-            <input
-              type="number"
-              onInput={(e: any) => setTimerDuration(e.target.value)}
-              className="border-2 mt-2"
-              placeholder="Duration..."
-              required
-            />
+            <div className="text-3xl">Settings</div>
+            <div className="flex text-2xl">
+              <div className="flex flex-col text-end mr-2">
+                <label htmlFor="hours">Hours:</label>
+                <label htmlFor="minutes">Minutes:</label>
+                <label htmlFor="seconds">Seconds:</label>
+              </div>
+              <div className="flex flex-col">
+                <input
+                  id="hours"
+                  type="number"
+                  value={hours}
+                  onInput={(e: any) => {
+                    const newHours = Math.max(0, Number(e.target.value));
+                    setTimerDuration(
+                      (newHours * 3600 + minutes * 60 + seconds) * 1000
+                    );
+                  }}
+                  className="w-15"
+                  placeholder="Hours"
+                  required
+                />{" "}
+                <input
+                  id="minutes"
+                  type="number"
+                  value={minutes}
+                  onInput={(e: any) => {
+                    const newMinutes = Math.max(0, Number(e.target.value));
+                    setTimerDuration(
+                      (hours * 3600 + newMinutes * 60 + seconds) * 1000
+                    );
+                  }}
+                  className="w-15"
+                  placeholder="Hours"
+                  required
+                />
+                <input
+                  id="seconds"
+                  type="number"
+                  value={seconds}
+                  onInput={(e: any) => {
+                    const newSeconds = Math.max(0, Number(e.target.value));
+                    setTimerDuration(
+                      (hours * 3600 + minutes * 60 + newSeconds) * 1000
+                    );
+                  }}
+                  className="w-15"
+                  placeholder="Hours"
+                  required
+                />
+              </div>
+            </div>
+            <div className="text-2xl flex">
+              <div className="text-start mr-1">Ending sound:</div>
+              <select
+                className="text-font bg-background"
+                value={endSound}
+                onChange={(e) => setEndSound(e.target.value)}
+              >
+                <option value="timer_finish_countdown1.mp3">Countdown</option>
+                <option value="timer_finish_buzz.mp3">Buzz</option>
+                <option value="timer_finish_ringing1.mp3">Ringing</option>
+              </select>
+            </div>
           </form>
           <div className="flex flex-col items-center gap-4 ">
             {timerNameList.map((el) => (
@@ -205,6 +266,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                 name={el.title}
                 id={el.id}
                 duration={el.duration}
+                soundEndName={endSound}
               />
             ))}
           </div>
@@ -217,20 +279,12 @@ export default function StopwatchSystem({ session }: { session: Session }) {
 function Stopwatch({ name, id }: { name: string; id: number }) {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-  const intervalRef = useRef(0); // ...
+  const intervalRef = useRef(0);
   const startTimeRef = useRef(0);
   const savedTimeRef = useRef(0);
 
   useEffect(() => {
     fetchTime();
-  }, []);
-  // Инициализация и очистка
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
   }, []);
 
   // Запуск/остановка секундомера
@@ -255,7 +309,7 @@ function Stopwatch({ name, id }: { name: string; id: number }) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isRunning, name]);
+  }, [isRunning]);
 
   const fetchTime = async () => {
     const { error, data } = await supabase
@@ -332,16 +386,13 @@ function Stopwatch({ name, id }: { name: string; id: number }) {
   return (
     <div className="">
       <div className="flex relative">
-        <div
-          className="text-3xl text-center mb-1 text-wrap wrap-anywhere w-80
-    "
-        >
+        <div className="text-3xl text-center mb-1 text-wrap wrap-anywhere w-80">
           {name}
         </div>
 
         <button
           onClick={() => deleteStopwatch(id)}
-          className="text-red-500 hover:text-red-700 transition absolute right-0"
+          className="text-delete hover:text-red-800 transition absolute right-0"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -360,7 +411,7 @@ function Stopwatch({ name, id }: { name: string; id: number }) {
         </button>
       </div>
 
-      <div className="bg-white text-center mb-2 text-3xl py-5 px-4 border rounded tracking-widest shadow-xl/10">
+      <div className="bg-foreground text-center mb-2 text-3xl py-5 px-4 border rounded tracking-widest shadow-xl/10">
         {formatTime(time)}
       </div>
       <div className="flex justify-between gap-3 text-3xl">
@@ -368,15 +419,15 @@ function Stopwatch({ name, id }: { name: string; id: number }) {
           onClick={startStop}
           className={
             isRunning
-              ? "bg-[#ff2525] w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10"
-              : "bg-[#75FF25] w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10"
+              ? "bg-delete w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
+              : "bg-primary w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
           }
         >
           {isRunning ? "Stop" : "Start"}
         </button>
         <button
           onClick={reset}
-          className="bg-[#FFC125] w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10"
+          className="bg-secondary w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
         >
           Reset
         </button>
@@ -390,29 +441,24 @@ function Timer({
   name,
   id,
   duration,
+  soundEndName,
 }: {
   name: string;
   id: number;
   duration: number;
+  soundEndName: string;
 }) {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-  const intervalRef = useRef(0); // ...
+  const [isFinished, setIsFinished] = useState(false);
+  const intervalRef = useRef(0);
   const startTimeRef = useRef(0);
   const savedTimeRef = useRef(0);
 
-  const soundEnd = playSound("/audio/timer_finish_buzz.mp3", 0.3);
+  const soundEnd = playSound(`audio/${soundEndName}`, 0.3);
 
   useEffect(() => {
     fetchTime();
-  }, []);
-  // Инициализация и очистка
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
   }, []);
 
   // Запуск/остановка таймера
@@ -427,7 +473,8 @@ function Timer({
           soundEnd.play();
           console.log("Timer has ended");
           setIsRunning(false);
-          reset();
+          setIsFinished(true);
+          return;
         }
         setTime(currentTime);
         changeTime(currentTime);
@@ -444,7 +491,7 @@ function Timer({
         clearInterval(intervalRef.current);
       }
     };
-  }, [isRunning, name]);
+  }, [isRunning]);
 
   const fetchTime = async () => {
     const { error, data } = await supabase
@@ -489,7 +536,9 @@ function Timer({
       return;
     }
 
+    soundEnd.stop();
     setTime(0);
+    setIsFinished(false);
     savedTimeRef.current = 0;
     localStorage.setItem(name, JSON.stringify(0));
     if (isRunning) {
@@ -499,6 +548,7 @@ function Timer({
 
   const deleteStopwatch = async (id: number) => {
     const { error } = await supabase.from("tasks").delete().eq("id", id);
+    soundEnd.stop();
 
     if (error) {
       console.error("Whoops! Couldn't delete: ", error.message);
@@ -523,16 +573,13 @@ function Timer({
   return (
     <div className="">
       <div className="flex relative">
-        <div
-          className="text-3xl text-center mb-1 text-wrap wrap-anywhere w-80
-    "
-        >
+        <div className="text-3xl text-center mb-1 text-wrap wrap-anywhere w-80">
           {name}
         </div>
 
         <button
           onClick={() => deleteStopwatch(id)}
-          className="text-red-500 hover:text-red-700 transition absolute right-0"
+          className="text-delete hover:text-red-800 transition absolute right-0"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -551,23 +598,26 @@ function Timer({
         </button>
       </div>
 
-      <div className="bg-white text-center mb-2 text-3xl py-5 px-4 border rounded tracking-widest shadow-xl/10">
-        {formatTime(time)}
+      <div className="bg-foreground text-center mb-2 text-3xl py-5 px-4 border rounded tracking-widest shadow-xl/10">
+        {isFinished && (
+          <div className="text-delete">Finished ({formatTime(0)})</div>
+        )}
+        <div>{formatTime(time)}</div>
       </div>
       <div className="flex justify-between gap-3 text-3xl">
         <button
           onClick={startStop}
           className={
             isRunning
-              ? "bg-[#ff2525] w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10"
-              : "bg-[#75FF25] w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10"
+              ? "bg-delete w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
+              : "bg-primary w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
           }
         >
           {isRunning ? "Stop" : "Start"}
         </button>
         <button
           onClick={reset}
-          className="bg-[#FFC125] w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10"
+          className="bg-secondary w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
         >
           Reset
         </button>

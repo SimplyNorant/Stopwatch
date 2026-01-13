@@ -59,7 +59,7 @@ export const Auth = () => {
   };
 
   return (
-    <div className="max-w-100 mx-auto my-0 p-4 text-2xl space-y-2 text-center">
+    <div className="max-w-100 mx-auto my-0 p-4 text-2xl space-y-2 text-center text-font **:border-black">
       <Modal open={isDialogOpen} onClose={() => setIsDialogOpen(false)} />
       <h2 className="text-3xl">{isSignUp ? "Sign Up" : "Sign In"}</h2>
       <form onSubmit={handleSubmit}>
@@ -70,7 +70,7 @@ export const Auth = () => {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-2 border-2 border-black rounded"
+            className="w-full p-2 border-2 rounded outline-gray-600"
             required
           />
           {errors && (
@@ -85,7 +85,7 @@ export const Auth = () => {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-2 border-2 rounded"
+            className="w-full p-2 border-2 rounded outline-gray-600"
             required
           />
           {errors && (
@@ -97,14 +97,15 @@ export const Auth = () => {
         </div>
         <button
           type="submit"
-          className="py-2 px-4 mr-2 bg-gray-300 hover:bg-gray-400 transition rounded shadow-xl/5"
+          className="py-2 px-4 mr-2 bg-foreground hover:bg-gray-300 dark:hover:bg-gray-500 transition rounded shadow-xl/5"
         >
           {isSignUp ? "Sign Up" : "Sign In"}
         </button>
       </form>
+      {/* Requires change */}
       <button
         onClick={signWithGoogle}
-        className="py-2 px-4 bg-orange-300 hover:bg-orange-400 transition rounded shadow-xl/5"
+        className="py-2 px-4 bg-orange-300 hover:bg-orange-400 dark:bg-orange-600 dark:hover:bg-orange-700  transition rounded shadow-xl/5"
       >
         With Google
       </button>
@@ -112,7 +113,7 @@ export const Auth = () => {
         onClick={() => {
           setIsSignUp(!isSignUp);
         }}
-        className="py-2 px-4 bg-gray-300 hover:bg-gray-400 transition rounded shadow-xl/5"
+        className="py-2 px-4 bg-foreground hover:bg-gray-300 dark:hover:bg-gray-500 transition rounded shadow-xl/5"
       >
         {isSignUp ? "Switch to Sign In" : "Switch to Sign Up"}
       </button>
