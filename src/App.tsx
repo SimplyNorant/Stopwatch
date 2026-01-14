@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Auth } from "./Auth";
 import StopwatchSystem from "./StopwatchSystem";
 import supabase from "./supabase-client";
@@ -59,6 +60,9 @@ function App() {
           <Auth />
         </>
       )}
+      <div className="text-center text-font mt-[50%] mb-5 hover:text-gray-400 transition">
+        <Link to={"/PrivacyPolicy"}>Privacy Policy</Link>
+      </div>
     </>
   );
 }
