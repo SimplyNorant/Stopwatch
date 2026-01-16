@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import supabase from "./supabase-client";
+import supabase from "../supabase-client";
 import type { Session } from "@supabase/supabase-js";
-import { playSound } from "./actions";
+import { playSound } from "../actions";
 
 interface Task {
   id: number;
@@ -146,7 +146,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
       <div className="mt-2 flex flex-col lg:flex-row justify-around gap-10 lg:gap-0 text-font **:border-black">
         <div className="flex flex-col items-center">
           {/* Stopwatches */}
-          <h1 className="text-center text-4xl mb-2">My Stopwatches</h1>
+          <h2 className="text-center text-4xl mb-2">My Stopwatches</h2>
           <button
             className="bg-primary w-sm rounded mb-2 text-3xl py-5 tracking-widest border shadow-xl/20 transition hover:-translate-y-0.5"
             onClick={addStopwatch}
@@ -175,7 +175,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
         </div>
         <div className="flex flex-col items-center">
           {/* Timers */}
-          <h1 className="text-center text-4xl mb-2">My Timers</h1>
+          <h2 className="text-center text-4xl mb-2">My Timers</h2>
 
           <form className="text-center flex flex-col">
             <button
@@ -201,7 +201,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                 <label htmlFor="minutes">Minutes:</label>
                 <label htmlFor="seconds">Seconds:</label>
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col *:w-10">
                 <input
                   id="hours"
                   type="number"
@@ -212,7 +212,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                       (newHours * 3600 + minutes * 60 + seconds) * 1000
                     );
                   }}
-                  className="w-15"
+                  onFocus={(e) => e.target.select()}
                   placeholder="Hours"
                   required
                 />{" "}
@@ -226,7 +226,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                       (hours * 3600 + newMinutes * 60 + seconds) * 1000
                     );
                   }}
-                  className="w-15"
+                  onFocus={(e) => e.target.select()}
                   placeholder="Hours"
                   required
                 />
@@ -240,7 +240,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                       (hours * 3600 + minutes * 60 + newSeconds) * 1000
                     );
                   }}
-                  className="w-15"
+                  onFocus={(e) => e.target.select()}
                   placeholder="Hours"
                   required
                 />

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Auth } from "./Auth";
-import StopwatchSystem from "./StopwatchSystem";
+import { Auth } from "./components/Auth";
+import StopwatchSystem from "./components/StopwatchSystem";
 import supabase from "./supabase-client";
 import DarkModeToggle from "./assets/darkModeToggle";
 

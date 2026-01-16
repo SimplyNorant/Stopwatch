@@ -1,6 +1,12 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 button {
   cursor: pointer;
 }
@@ -21,6 +27,7 @@ button {
   --secondary: hsl(43, 100%, 57%);
   --font: hsl(0, 0%, 0%);
   --delete: hsl(0, 100%, 60%);
+  font-family: "Roboto";
 }
 
 /* Dark theme */
@@ -31,11 +38,4 @@ button {
   --secondary: hsl(43, 100%, 40%);
   --font: hsl(0, 0%, 90%);
   --delete: hsl(0, 100%, 40%);
-}
-
-/* Brand theme */
-.brand {
-  --background: 32 100% 95%;
-  --foreground: 20 14% 4%;
-  --primary: 20 90% 50%;
 }

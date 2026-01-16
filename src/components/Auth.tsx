@@ -1,7 +1,7 @@
 import { useState } from "react";
-import supabase from "./supabase-client";
+import supabase from "../supabase-client";
 import { z } from "zod";
-import { Modal } from "./assets/dialog";
+import { Modal } from "../assets/dialog";
 
 export const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);

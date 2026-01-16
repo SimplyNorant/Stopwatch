@@ -3,8 +3,8 @@ import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
 import App from "./App.tsx";
-import NotFoundPage from "./NotFoundPage.tsx";
-import PrivacyPolicy from "./PrivacyPolicy.tsx";
+import NotFoundPage from "./components/NotFoundPage.tsx";
+import PrivacyPolicy from "./components/PrivacyPolicy.tsx";
 
 const router = createBrowserRouter([
   { path: "/", element: <App /> },
