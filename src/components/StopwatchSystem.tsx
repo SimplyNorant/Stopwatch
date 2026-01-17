@@ -1,4 +1,22 @@
 import { useState, useEffect, useRef } from "react";
+import {
+  closestCorners,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { RxDragHandleDots2 } from "react-icons/rx";
 import supabase from "../supabase-client";
 import type { Session } from "@supabase/supabase-js";
 import { playSound } from "../actions";
@@ -9,11 +27,12 @@ interface Task {
   description: string;
   created_at: string;
   duration: number;
+  position: number;
 }
 
 export default function StopwatchSystem({ session }: { session: Session }) {
   // STOPWATCH
-  const [stopwatchNameList, setStopwatchNameList] = useState<Task[]>([]);
+  const [stopwatchList, setStopwatchNameList] = useState<Task[]>([]);
   const [stopwatchInput, setStopwatchInput] = useState<string>("");
 
   // TIMER
@@ -51,7 +70,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
           } else {
             setTimerNameList((prev) => [...prev, newTask]);
           }
-        }
+        },
       )
       .on(
         "postgres_changes",
@@ -65,10 +84,10 @@ export default function StopwatchSystem({ session }: { session: Session }) {
           console.log(oldTask);
 
           setStopwatchNameList((prev) =>
-            prev.filter((el) => el.id !== oldTask.id)
+            prev.filter((el) => el.id !== oldTask.id),
           );
           setTimerNameList((prev) => prev.filter((el) => el.id !== oldTask.id));
-        }
+        },
       )
       .subscribe((status) => {
         console.log("Subscription: ", status);
@@ -84,7 +103,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
       .from("tasks")
       .select("*")
       .eq("duration", 0)
-      .order("created_at", { ascending: true });
+      .order("position", { ascending: true });
 
     if (error) {
       console.error("Whoops! While fetching stopwatches: ", error.message);
@@ -119,7 +138,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
       console.error("Whoops! Couldn't add it: ", error.message);
       return;
     }
-    setStopwatchNameList(stopwatchNameList);
+    setStopwatchNameList(stopwatchList);
   };
 
   const addTimer = async (e: any) => {
@@ -141,6 +160,51 @@ export default function StopwatchSystem({ session }: { session: Session }) {
     setTimerNameList(timerNameList);
   };
 
+  // After adding async things went downhill
+
+  const getTaskPos = (id: any) =>
+    stopwatchList.findIndex((task) => task.id === id);
+
+  const handleDragEnd = async (e: any) => {
+    const { active, over } = e;
+    if (active.id === over.id) return;
+
+    let startPos, endPos;
+    stopwatchList.forEach((el: any) => {
+      if (el.id === active.id) startPos = el.position;
+      else if (el.id === over.id) endPos = el.position;
+    });
+
+    const { error } = await supabase
+      .from("tasks")
+      .update({ position: endPos })
+      .eq("id", active.id);
+
+    if (error) {
+      console.error("Whoops! Couldn't update POSITION after dragging!");
+    }
+
+    await supabase
+      .from("tasks")
+      .update({ position: startPos })
+      .eq("id", over.id);
+
+    console.log(startPos, endPos);
+    setStopwatchNameList((tasks) => {
+      const originalPos = getTaskPos(active.id);
+      const newPos = getTaskPos(over.id);
+
+      return arrayMove(tasks, originalPos, newPos);
+    });
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
   return (
     <>
       <div className="mt-2 flex flex-col lg:flex-row justify-around gap-10 lg:gap-0 text-font **:border-black">
@@ -167,11 +231,22 @@ export default function StopwatchSystem({ session }: { session: Session }) {
               className="w-sm py-5 text-3xl text-center text-wrap border-2 bg-foreground"
             ></textarea>
           </form>
-          <div className="flex flex-col items-center gap-4">
-            {stopwatchNameList.map((el) => (
-              <Stopwatch key={el.id} name={el.title} id={el.id} />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            onDragEnd={handleDragEnd}
+            collisionDetection={closestCorners}
+          >
+            <div className="flex flex-col items-center gap-4 touch-none">
+              <SortableContext
+                items={stopwatchList}
+                strategy={verticalListSortingStrategy}
+              >
+                {stopwatchList.map((el) => (
+                  <Stopwatch key={el.id} name={el.title} id={el.id} />
+                ))}
+              </SortableContext>
+            </div>
+          </DndContext>
         </div>
         <div className="flex flex-col items-center">
           {/* Timers */}
@@ -209,7 +284,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                   onInput={(e: any) => {
                     const newHours = Math.max(0, Number(e.target.value));
                     setTimerDuration(
-                      (newHours * 3600 + minutes * 60 + seconds) * 1000
+                      (newHours * 3600 + minutes * 60 + seconds) * 1000,
                     );
                   }}
                   onFocus={(e) => e.target.select()}
@@ -223,7 +298,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                   onInput={(e: any) => {
                     const newMinutes = Math.max(0, Number(e.target.value));
                     setTimerDuration(
-                      (hours * 3600 + newMinutes * 60 + seconds) * 1000
+                      (hours * 3600 + newMinutes * 60 + seconds) * 1000,
                     );
                   }}
                   onFocus={(e) => e.target.select()}
@@ -237,7 +312,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                   onInput={(e: any) => {
                     const newSeconds = Math.max(0, Number(e.target.value));
                     setTimerDuration(
-                      (hours * 3600 + minutes * 60 + newSeconds) * 1000
+                      (hours * 3600 + minutes * 60 + newSeconds) * 1000,
                     );
                   }}
                   onFocus={(e) => e.target.select()}
@@ -282,6 +357,14 @@ function Stopwatch({ name, id }: { name: string; id: number }) {
   const intervalRef = useRef(0);
   const startTimeRef = useRef(0);
   const savedTimeRef = useRef(0);
+
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id });
+
+  const style = {
+    transition,
+    transform: CSS.Transform.toString(transform),
+  };
 
   useEffect(() => {
     fetchTime();
@@ -384,7 +467,7 @@ function Stopwatch({ name, id }: { name: string; id: number }) {
   };
 
   return (
-    <div className="">
+    <div ref={setNodeRef} style={style}>
       <div className="flex relative">
         <div className="text-3xl text-center mb-1 text-wrap wrap-anywhere w-80">
           {name}
@@ -392,7 +475,7 @@ function Stopwatch({ name, id }: { name: string; id: number }) {
 
         <button
           onClick={() => deleteStopwatch(id)}
-          className="text-delete hover:text-red-800 transition absolute right-0"
+          className="text-delete hover:text-red-800 transition absolute right-0 z-1"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -410,11 +493,20 @@ function Stopwatch({ name, id }: { name: string; id: number }) {
           </svg>
         </button>
       </div>
-
-      <div className="bg-foreground text-center mb-2 text-3xl py-5 px-4 border rounded tracking-widest shadow-xl/10">
-        {formatTime(time)}
+      <div>
+        <div className="relative bg-foreground text-center mb-2 text-3xl py-5 px-4 border rounded tracking-widest shadow-xl/10">
+          {formatTime(time)}
+          <div
+            {...listeners}
+            {...attributes}
+            className="top-6 -left-7 absolute cursor-grab active:cursor-grabbing"
+          >
+            <RxDragHandleDots2 size={25} />
+          </div>
+        </div>
       </div>
-      <div className="flex justify-between gap-3 text-3xl">
+
+      <div className="relative flex justify-between gap-3 text-3xl">
         <button
           onClick={startStop}
           className={
