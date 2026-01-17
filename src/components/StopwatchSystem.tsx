@@ -32,11 +32,11 @@ interface Task {
 
 export default function StopwatchSystem({ session }: { session: Session }) {
   // STOPWATCH
-  const [stopwatchList, setStopwatchNameList] = useState<Task[]>([]);
+  const [stopwatchList, setStopwatchList] = useState<Task[]>([]);
   const [stopwatchInput, setStopwatchInput] = useState<string>("");
 
   // TIMER
-  const [timerNameList, setTimerNameList] = useState<Task[]>([]);
+  const [timerList, setTimerList] = useState<Task[]>([]);
   const [timerInput, setTimerInput] = useState<string>("");
   const [timerDuration, setTimerDuration] = useState(0);
   const [endSound, setEndSound] = useState("timer_finish_ringing1.mp3");
@@ -66,9 +66,9 @@ export default function StopwatchSystem({ session }: { session: Session }) {
           const newTask = payload.new as Task;
           console.log(newTask);
           if (newTask.duration === 0) {
-            setStopwatchNameList((prev) => [...prev, newTask]);
+            setStopwatchList((prev) => [...prev, newTask]);
           } else {
-            setTimerNameList((prev) => [...prev, newTask]);
+            setTimerList((prev) => [...prev, newTask]);
           }
         },
       )
@@ -83,10 +83,8 @@ export default function StopwatchSystem({ session }: { session: Session }) {
           const oldTask = payload.old;
           console.log(oldTask);
 
-          setStopwatchNameList((prev) =>
-            prev.filter((el) => el.id !== oldTask.id),
-          );
-          setTimerNameList((prev) => prev.filter((el) => el.id !== oldTask.id));
+          setStopwatchList((prev) => prev.filter((el) => el.id !== oldTask.id));
+          setTimerList((prev) => prev.filter((el) => el.id !== oldTask.id));
         },
       )
       .subscribe((status) => {
@@ -110,7 +108,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
       return;
     }
 
-    setStopwatchNameList(data);
+    setStopwatchList(data);
   };
 
   const fetchTimers = async () => {
@@ -118,14 +116,14 @@ export default function StopwatchSystem({ session }: { session: Session }) {
       .from("tasks")
       .select("*")
       .gt("duration", 0)
-      .order("created_at", { ascending: true });
+      .order("position", { ascending: true });
 
     if (error) {
       console.error("Whoops! While fetching timers: ", error.message);
       return;
     }
 
-    setTimerNameList(data);
+    setTimerList(data);
   };
 
   const addStopwatch = async () => {
@@ -138,7 +136,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
       console.error("Whoops! Couldn't add it: ", error.message);
       return;
     }
-    setStopwatchNameList(stopwatchList);
+    setStopwatchList(stopwatchList);
   };
 
   const addTimer = async (e: any) => {
@@ -157,47 +155,40 @@ export default function StopwatchSystem({ session }: { session: Session }) {
       console.error("Whoops! Couldn't add it: ", error.message);
       return;
     }
-    setTimerNameList(timerNameList);
+    setTimerList(timerList);
   };
 
-  // After adding async things went downhill
-
-  const getTaskPos = (id: any) =>
-    stopwatchList.findIndex((task) => task.id === id);
-
-  const handleDragEnd = async (e: any) => {
+  const handleDragEnd = async (e: any, isStopwatch: boolean) => {
     const { active, over } = e;
     if (active.id === over.id) return;
 
-    let startPos, endPos;
-    stopwatchList.forEach((el: any) => {
-      if (el.id === active.id) startPos = el.position;
-      else if (el.id === over.id) endPos = el.position;
-    });
+    try {
+      if (isStopwatch) {
+        setStopwatchList((tasks) => {
+          const originalPos = tasks.findIndex((task) => task.id === active.id);
+          const newPos = tasks.findIndex((task) => task.id === over.id);
+          return arrayMove(tasks, originalPos, newPos);
+        });
+      } else {
+        setTimerList((tasks) => {
+          const originalPos = tasks.findIndex((task) => task.id === active.id);
+          const newPos = tasks.findIndex((task) => task.id === over.id);
+          return arrayMove(tasks, originalPos, newPos);
+        });
+      }
 
-    const { error } = await supabase
-      .from("tasks")
-      .update({ position: endPos })
-      .eq("id", active.id);
+      const { error } = await supabase.rpc("swap_task_positions", {
+        task_id_1: active.id,
+        task_id_2: over.id,
+      });
 
-    if (error) {
-      console.error("Whoops! Couldn't update POSITION after dragging!");
+      if (error) {
+        console.error("Swap failed:", error);
+      }
+    } catch (error) {
+      console.error("Error in handleDragEnd:", error);
     }
-
-    await supabase
-      .from("tasks")
-      .update({ position: startPos })
-      .eq("id", over.id);
-
-    console.log(startPos, endPos);
-    setStopwatchNameList((tasks) => {
-      const originalPos = getTaskPos(active.id);
-      const newPos = getTaskPos(over.id);
-
-      return arrayMove(tasks, originalPos, newPos);
-    });
   };
-
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(TouchSensor),
@@ -233,7 +224,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
           </form>
           <DndContext
             sensors={sensors}
-            onDragEnd={handleDragEnd}
+            onDragEnd={(e) => handleDragEnd(e, true)}
             collisionDetection={closestCorners}
           >
             <div className="flex flex-col items-center gap-4 touch-none">
@@ -334,17 +325,28 @@ export default function StopwatchSystem({ session }: { session: Session }) {
               </select>
             </div>
           </form>
-          <div className="flex flex-col items-center gap-4 ">
-            {timerNameList.map((el) => (
-              <Timer
-                key={el.id}
-                name={el.title}
-                id={el.id}
-                duration={el.duration}
-                soundEndName={endSound}
-              />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            onDragEnd={(e) => handleDragEnd(e, false)}
+            collisionDetection={closestCorners}
+          >
+            <div className="flex flex-col items-center gap-4 ">
+              <SortableContext
+                items={timerList}
+                strategy={verticalListSortingStrategy}
+              >
+                {timerList.map((el) => (
+                  <Timer
+                    key={el.id}
+                    name={el.title}
+                    id={el.id}
+                    duration={el.duration}
+                    soundEndName={endSound}
+                  />
+                ))}{" "}
+              </SortableContext>
+            </div>
+          </DndContext>
         </div>
       </div>
     </>
@@ -549,6 +551,14 @@ function Timer({
 
   const soundEnd = playSound(`audio/${soundEndName}`, 0.3);
 
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id });
+
+  const style = {
+    transition,
+    transform: CSS.Transform.toString(transform),
+  };
+
   useEffect(() => {
     fetchTime();
   }, []);
@@ -663,7 +673,7 @@ function Timer({
   };
 
   return (
-    <div className="">
+    <div ref={setNodeRef} style={style}>
       <div className="flex relative">
         <div className="text-3xl text-center mb-1 text-wrap wrap-anywhere w-80">
           {name}
@@ -690,13 +700,20 @@ function Timer({
         </button>
       </div>
 
-      <div className="bg-foreground text-center mb-2 text-3xl py-5 px-4 border rounded tracking-widest shadow-xl/10">
+      <div className="relative bg-foreground text-center mb-2 text-3xl py-5 px-4 border rounded tracking-widest shadow-xl/10">
         {isFinished && (
           <div className="text-delete">Finished ({formatTime(0)})</div>
         )}
         <div>{formatTime(time)}</div>
+        <div
+          {...listeners}
+          {...attributes}
+          className="absolute top-6 -left-7 cursor-grab active:cursor-grabbing"
+        >
+          <RxDragHandleDots2 size={25} />
+        </div>
       </div>
-      <div className="flex justify-between gap-3 text-3xl">
+      <div className="relative flex justify-between gap-3 text-3xl">
         <button
           onClick={startStop}
           className={
