@@ -400,13 +400,13 @@ function TimeTask({
       startTimeRef.current = Date.now() - savedTimeRef.current;
 
       intervalRef.current = setInterval(() => {
-        const currentTime = Date.now() - startTimeRef.current;
+        let currentTime = Date.now() - startTimeRef.current;
         if (duration && currentTime > duration) {
           clearInterval(intervalRef.current);
           soundEnd.play();
-          console.log("Timer has ended");
           setIsRunning(false);
           setIsFinished(true);
+          currentTime = 0;
           return;
         }
         setTime(currentTime);
