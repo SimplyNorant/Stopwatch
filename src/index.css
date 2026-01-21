@@ -39,3 +39,9 @@ button {
   --font: hsl(0, 0%, 90%);
   --delete: hsl(0, 100%, 40%);
 }
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

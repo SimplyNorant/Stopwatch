@@ -20,6 +20,7 @@ import { RxDragHandleDots2 } from "react-icons/rx";
 import supabase from "../supabase-client";
 import type { Session } from "@supabase/supabase-js";
 import { playSound } from "../actions";
+import Spinner from "../assets/spinner";
 
 interface Task {
   id: number;
@@ -31,6 +32,7 @@ interface Task {
 }
 
 export default function StopwatchSystem({ session }: { session: Session }) {
+  const [loading, setLoading] = useState(true);
   // STOPWATCH
   const [stopwatchList, setStopwatchList] = useState<Task[]>([]);
   const [stopwatchInput, setStopwatchInput] = useState<string>("");
@@ -41,15 +43,20 @@ export default function StopwatchSystem({ session }: { session: Session }) {
   const [timerDuration, setTimerDuration] = useState(0);
   const [endSound, setEndSound] = useState("timer_finish_ringing1.mp3");
 
+  // TIMER DURATION
   const totalSeconds = Math.floor(timerDuration / 1000);
-
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
 
   useEffect(() => {
-    fetchStopwatches();
-    fetchTimers();
+    const load = async () => {
+      setLoading(true);
+      await fetchTasks();
+      setLoading(false);
+    };
+
+    load();
   }, []);
 
   useEffect(() => {
@@ -95,35 +102,19 @@ export default function StopwatchSystem({ session }: { session: Session }) {
     };
   }, []);
 
-  // I think, it is possible to merge those 2 fetching.
-  const fetchStopwatches = async () => {
-    const { error, data } = await supabase
+  const fetchTasks = async () => {
+    const { data, error } = await supabase
       .from("tasks")
       .select("*")
-      .eq("duration", 0)
       .order("position", { ascending: true });
 
     if (error) {
-      console.error("Whoops! While fetching stopwatches: ", error.message);
+      console.error("Error while fetching tasks: ", error.message);
       return;
     }
 
-    setStopwatchList(data);
-  };
-
-  const fetchTimers = async () => {
-    const { error, data } = await supabase
-      .from("tasks")
-      .select("*")
-      .gt("duration", 0)
-      .order("position", { ascending: true });
-
-    if (error) {
-      console.error("Whoops! While fetching timers: ", error.message);
-      return;
-    }
-
-    setTimerList(data);
+    setStopwatchList(data.filter((task) => task.duration === 0));
+    setTimerList(data.filter((task) => task.duration > 0));
   };
 
   const addStopwatch = async () => {
@@ -196,6 +187,11 @@ export default function StopwatchSystem({ session }: { session: Session }) {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
+  if (loading) {
+    return <Spinner label="Loading your timers…" />;
+  }
+
   return (
     <>
       <div className="mt-2 flex flex-col lg:flex-row justify-around gap-10 lg:gap-0 text-font **:border-black">
@@ -233,7 +229,12 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                 strategy={verticalListSortingStrategy}
               >
                 {stopwatchList.map((el) => (
-                  <Stopwatch key={el.id} name={el.title} id={el.id} />
+                  <TimeTask
+                    key={el.id}
+                    name={el.title}
+                    id={el.id}
+                    duration={0}
+                  />
                 ))}
               </SortableContext>
             </div>
@@ -330,20 +331,20 @@ export default function StopwatchSystem({ session }: { session: Session }) {
             onDragEnd={(e) => handleDragEnd(e, false)}
             collisionDetection={closestCorners}
           >
-            <div className="flex flex-col items-center gap-4 ">
+            <div className="flex flex-col items-center gap-4 touch-none">
               <SortableContext
                 items={timerList}
                 strategy={verticalListSortingStrategy}
               >
                 {timerList.map((el) => (
-                  <Timer
+                  <TimeTask
                     key={el.id}
                     name={el.title}
                     id={el.id}
                     duration={el.duration}
                     soundEndName={endSound}
                   />
-                ))}{" "}
+                ))}
               </SortableContext>
             </div>
           </DndContext>
@@ -353,185 +354,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
   );
 }
 
-function Stopwatch({ name, id }: { name: string; id: number }) {
-  const [time, setTime] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
-  const intervalRef = useRef(0);
-  const startTimeRef = useRef(0);
-  const savedTimeRef = useRef(0);
-
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id });
-
-  const style = {
-    transition,
-    transform: CSS.Transform.toString(transform),
-  };
-
-  useEffect(() => {
-    fetchTime();
-  }, []);
-
-  // Запуск/остановка секундомера
-  useEffect(() => {
-    if (isRunning) {
-      startTimeRef.current = Date.now() - savedTimeRef.current;
-
-      intervalRef.current = setInterval(() => {
-        const currentTime = Date.now() - startTimeRef.current;
-        setTime(currentTime);
-        changeTime(currentTime);
-        savedTimeRef.current = currentTime;
-      }, 10);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [isRunning]);
-
-  const fetchTime = async () => {
-    const { error, data } = await supabase
-      .from("tasks")
-      .select("time")
-      .eq("id", id);
-
-    if (error) {
-      console.error("Whoops! While fetching: ", error.message);
-      return;
-    }
-
-    savedTimeRef.current = data[0].time;
-    setTime(data[0].time);
-  };
-
-  const changeTime = async (change: number) => {
-    const { error } = await supabase
-      .from("tasks")
-      .update({ time: change })
-      .eq("id", id);
-
-    if (error) {
-      console.log("Whoops! Couldn't change time: ", error.message);
-      return;
-    }
-  };
-
-  const startStop = () => {
-    setIsRunning(!isRunning);
-  };
-
-  const reset = async () => {
-    const { error } = await supabase
-      .from("tasks")
-      .update({ time: 0 })
-      .eq("id", id);
-
-    if (error) {
-      console.log("Whoops! Couldn't reset time: ", error.message);
-      return;
-    }
-
-    setTime(0);
-    savedTimeRef.current = 0;
-
-    if (isRunning) {
-      startTimeRef.current = Date.now();
-    }
-  };
-
-  const deleteStopwatch = async (id: number) => {
-    const { error } = await supabase.from("tasks").delete().eq("id", id);
-
-    if (error) {
-      console.error("Whoops! Couldn't delete: ", error.message);
-      return;
-    }
-  };
-
-  const formatTime = (timeInMs: number) => {
-    const hours = Math.floor(timeInMs / 3600000);
-    const minutes = Math.floor((timeInMs % 3600000) / 60000);
-    const seconds = Math.floor((timeInMs % 60000) / 1000);
-    const milliseconds = Math.floor((timeInMs % 1000) / 10);
-
-    return `${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}.${milliseconds
-      .toString()
-      .padStart(2, "0")}`;
-  };
-
-  return (
-    <div ref={setNodeRef} style={style}>
-      <div className="flex relative">
-        <div className="text-3xl text-center mb-1 text-wrap wrap-anywhere w-80">
-          {name}
-        </div>
-
-        <button
-          onClick={() => deleteStopwatch(id)}
-          className="text-delete hover:text-red-800 transition absolute right-0 z-1"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth="1.5"
-            stroke="currentColor"
-            className="size-8"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M6 18 18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      </div>
-      <div>
-        <div className="relative bg-foreground text-center mb-2 text-3xl py-5 px-4 border rounded tracking-widest shadow-xl/10">
-          {formatTime(time)}
-          <div
-            {...listeners}
-            {...attributes}
-            className="top-6 -left-7 absolute cursor-grab active:cursor-grabbing"
-          >
-            <RxDragHandleDots2 size={25} />
-          </div>
-        </div>
-      </div>
-
-      <div className="relative flex justify-between gap-3 text-3xl">
-        <button
-          onClick={startStop}
-          className={
-            isRunning
-              ? "bg-delete w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
-              : "bg-primary w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
-          }
-        >
-          {isRunning ? "Stop" : "Start"}
-        </button>
-        <button
-          onClick={reset}
-          className="bg-secondary w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
-        >
-          Reset
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// It is also possible to merge Timer and Stopwatch. Or use OOP.
-function Timer({
+function TimeTask({
   name,
   id,
   duration,
@@ -540,7 +363,7 @@ function Timer({
   name: string;
   id: number;
   duration: number;
-  soundEndName: string;
+  soundEndName?: string;
 }) {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
@@ -554,23 +377,31 @@ function Timer({
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id });
 
+  // Dragging properties
   const style = {
     transition,
-    transform: CSS.Transform.toString(transform),
+    transform: transform
+      ? CSS.Transform.toString({
+          x: transform.x,
+          y: transform.y,
+          scaleX: 1,
+          scaleY: 1,
+        })
+      : undefined,
   };
 
   useEffect(() => {
     fetchTime();
   }, []);
 
-  // Запуск/остановка таймера
+  // Time Logic
   useEffect(() => {
     if (isRunning) {
       startTimeRef.current = Date.now() - savedTimeRef.current;
 
       intervalRef.current = setInterval(() => {
         const currentTime = Date.now() - startTimeRef.current;
-        if (currentTime > duration) {
+        if (duration && currentTime > duration) {
           clearInterval(intervalRef.current);
           soundEnd.play();
           console.log("Timer has ended");
@@ -638,11 +469,13 @@ function Timer({
       return;
     }
 
-    soundEnd.stop();
     setTime(0);
-    setIsFinished(false);
     savedTimeRef.current = 0;
-    localStorage.setItem(name, JSON.stringify(0));
+    if (duration) {
+      soundEnd.stop();
+      setIsFinished(false);
+    }
+
     if (isRunning) {
       startTimeRef.current = Date.now();
     }
@@ -659,7 +492,9 @@ function Timer({
   };
 
   const formatTime = (timeInMs: number) => {
-    timeInMs = duration - timeInMs;
+    if (duration) {
+      timeInMs = duration - timeInMs;
+    }
     const hours = Math.floor(timeInMs / 3600000);
     const minutes = Math.floor((timeInMs % 3600000) / 60000);
     const seconds = Math.floor((timeInMs % 60000) / 1000);
@@ -681,7 +516,7 @@ function Timer({
 
         <button
           onClick={() => deleteStopwatch(id)}
-          className="text-delete hover:text-red-800 transition absolute right-0"
+          className="text-delete hover:text-red-800 transition absolute right-0 z-1"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -705,6 +540,7 @@ function Timer({
           <div className="text-delete">Finished ({formatTime(0)})</div>
         )}
         <div>{formatTime(time)}</div>
+        {/* Handle for dragging */}
         <div
           {...listeners}
           {...attributes}
