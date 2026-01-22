@@ -20,7 +20,8 @@ import { RxDragHandleDots2 } from "react-icons/rx";
 import supabase from "../supabase-client";
 import type { Session } from "@supabase/supabase-js";
 import { playSound } from "../actions";
-import Spinner from "../assets/spinner";
+// import Spinner from "../assets/spinner";
+import StopwatchSkeletonList from "../assets/skeleton";
 
 interface Task {
   id: number;
@@ -51,7 +52,6 @@ export default function StopwatchSystem({ session }: { session: Session }) {
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true);
       await fetchTasks();
       setLoading(false);
     };
@@ -188,10 +188,6 @@ export default function StopwatchSystem({ session }: { session: Session }) {
     }),
   );
 
-  if (loading) {
-    return <Spinner label="Loading your timers…" />;
-  }
-
   return (
     <>
       <div className="mt-2 flex flex-col lg:flex-row justify-around gap-10 lg:gap-0 text-font **:border-black">
@@ -228,14 +224,18 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                 items={stopwatchList}
                 strategy={verticalListSortingStrategy}
               >
-                {stopwatchList.map((el) => (
-                  <TimeTask
-                    key={el.id}
-                    name={el.title}
-                    id={el.id}
-                    duration={0}
-                  />
-                ))}
+                {loading ? (
+                  <StopwatchSkeletonList count={3} />
+                ) : (
+                  stopwatchList.map((el) => (
+                    <TimeTask
+                      key={el.id}
+                      name={el.title}
+                      id={el.id}
+                      duration={0}
+                    />
+                  ))
+                )}
               </SortableContext>
             </div>
           </DndContext>
@@ -336,15 +336,19 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                 items={timerList}
                 strategy={verticalListSortingStrategy}
               >
-                {timerList.map((el) => (
-                  <TimeTask
-                    key={el.id}
-                    name={el.title}
-                    id={el.id}
-                    duration={el.duration}
-                    soundEndName={endSound}
-                  />
-                ))}
+                {loading ? (
+                  <StopwatchSkeletonList count={3} />
+                ) : (
+                  timerList.map((el) => (
+                    <TimeTask
+                      key={el.id}
+                      name={el.title}
+                      id={el.id}
+                      duration={el.duration}
+                      soundEndName={endSound}
+                    />
+                  ))
+                )}
               </SortableContext>
             </div>
           </DndContext>
@@ -453,22 +457,13 @@ function TimeTask({
     }
   };
 
-  const startStop = () => {
+  const startStop = async () => {
+    if (isFinished) await reset();
     setIsRunning(!isRunning);
-    soundEnd.stop();
   };
 
   const reset = async () => {
-    const { error } = await supabase
-      .from("tasks")
-      .update({ time: 0 })
-      .eq("id", id);
-
-    if (error) {
-      console.log("Whoops! Couldn't reset time: ", error.message);
-      return;
-    }
-
+    setIsRunning(false);
     setTime(0);
     savedTimeRef.current = 0;
     if (duration) {
@@ -478,6 +473,16 @@ function TimeTask({
 
     if (isRunning) {
       startTimeRef.current = Date.now();
+    }
+
+    const { error } = await supabase
+      .from("tasks")
+      .update({ time: 0 })
+      .eq("id", id);
+
+    if (error) {
+      console.log("Whoops! Couldn't reset time: ", error.message);
+      return;
     }
   };
 
@@ -536,10 +541,14 @@ function TimeTask({
       </div>
 
       <div className="relative bg-foreground text-center mb-2 text-3xl py-5 px-4 border rounded tracking-widest shadow-xl/10">
-        {isFinished && (
-          <div className="text-delete">Finished ({formatTime(0)})</div>
+        {isFinished ? (
+          <div className="text-delete">
+            Time! ({formatTime(0).slice(0, formatTime(0).length - 3)})
+          </div>
+        ) : (
+          <div>{formatTime(time)}</div>
         )}
-        <div>{formatTime(time)}</div>
+
         {/* Handle for dragging */}
         <div
           {...listeners}
