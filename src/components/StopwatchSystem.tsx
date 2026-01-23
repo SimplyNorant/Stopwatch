@@ -373,7 +373,8 @@ function TimeTask({
   const [isRunning, setIsRunning] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [, forceRender] = useState(0);
-  const startTimeRef = useRef<null | number>(0);
+  const startTimeRef = useRef<null | number>(null);
+  const endTimeRef = useRef<number | null>(null);
 
   // Time Logic (Time is derived)
   const displayTime =
@@ -399,6 +400,36 @@ function TimeTask({
       : undefined,
   };
 
+  // Notification System
+  const requestNotificationPermission = async () => {
+    if (!("Notification" in window)) return;
+
+    if (Notification.permission === "default") {
+      await Notification.requestPermission();
+    }
+  };
+
+  const showNotification = async () => {
+    // if (!("serviceWorker" in navigator)) return;
+    // if (Notification.permission !== "granted") return;
+
+    const reg = await navigator.serviceWorker.ready;
+    reg.active?.postMessage({
+      type: "TIMER_DONE",
+      name,
+    });
+  };
+
+  // Service Worker
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then(() => console.log("Service Worker registered"))
+        .catch((err) => console.error("SW registration failed:", err));
+    }
+  }, []);
+
   // Loading Time and the date of starting (if exists)
   useEffect(() => {
     const load = async () => {
@@ -416,6 +447,27 @@ function TimeTask({
       setTime(data.time);
       if (data.started_at) {
         startTimeRef.current = new Date(data.started_at).getTime();
+        setIsRunning(true);
+      }
+
+      if (data.started_at && duration) {
+        const started = new Date(data.started_at).getTime();
+        const elapsed = Date.now() - started;
+        const total = data.time + elapsed;
+
+        // TIMER ALREADY FINISHED
+        if (total >= duration) {
+          setIsRunning(false);
+          setIsFinished(true);
+
+          showNotification();
+
+          return;
+        }
+
+        // TIMER STILL RUNNING
+        startTimeRef.current = started;
+        endTimeRef.current = started + (duration - data.time);
         setIsRunning(true);
       }
     };
@@ -441,16 +493,44 @@ function TimeTask({
 
   // Timer Logic
   useEffect(() => {
-    if (!duration || !isRunning) return;
+    if (!duration || !isRunning || !endTimeRef.current) return;
 
-    if (displayTime >= duration) {
+    const remaining = endTimeRef.current - Date.now();
+    if (remaining <= 0) {
+      // Handle immediately
       setIsRunning(false);
       setIsFinished(true);
       soundEnd.play();
+
+      // if (document.visibilityState !== "visible") {
+      //   showNotification();
+      // }
+      showNotification();
+
+      document.title = "⏰ Time's up!";
+      return;
     }
-  }, [displayTime]);
+
+    const timeout = setTimeout(() => {
+      setIsRunning(false);
+      setIsFinished(true);
+
+      soundEnd.play();
+
+      // if (document.visibilityState !== "visible") {
+      //   showNotification();
+      // }
+      showNotification();
+
+      document.title = "⏰ Time's up!";
+    }, remaining);
+
+    return () => clearTimeout(timeout);
+  }, [isRunning, duration]);
 
   const startStop = async () => {
+    await requestNotificationPermission();
+
     if (isFinished) await reset();
 
     if (isRunning) {
@@ -459,6 +539,8 @@ function TimeTask({
       const elapsed = time + (Date.now() - startTimeRef.current);
 
       startTimeRef.current = null;
+      endTimeRef.current = null;
+
       setTime(elapsed);
       setIsRunning(false);
 
@@ -470,12 +552,17 @@ function TimeTask({
         })
         .eq("id", id);
     } else {
-      const now = new Date().toISOString();
+      const now = Date.now();
 
-      startTimeRef.current = Date.now();
+      startTimeRef.current = now;
+      endTimeRef.current = duration ? now + (duration - time) : null;
+
       setIsRunning(true);
 
-      await supabase.from("tasks").update({ started_at: now }).eq("id", id);
+      await supabase
+        .from("tasks")
+        .update({ started_at: new Date(now).toISOString() })
+        .eq("id", id);
     }
   };
 
@@ -483,8 +570,9 @@ function TimeTask({
     startTimeRef.current = null;
     setIsRunning(false);
     setTime(0);
-    if (duration) {
+    if (isFinished) {
       soundEnd.stop();
+      document.title = "Stopwatches"; // Possible to use a variable for this, in case I'd want to change the website's name
       setIsFinished(false);
     }
 
