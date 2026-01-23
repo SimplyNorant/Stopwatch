@@ -7,16 +7,23 @@ import DarkModeToggle from "./assets/darkModeToggle";
 
 function App() {
   const [session, setSession] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
-  const fetchSession = async () => {
-    const currentSession = await supabase.auth.getSession();
-    console.log(currentSession);
-    console.log(currentSession.data.session?.user.email);
-    setSession(currentSession.data.session);
-  };
+  // const fetchSession = async () => {
+  //   const currentSession = await supabase.auth.getSession();
+  //   console.log(currentSession);
+  //   console.log(currentSession.data.session?.user.email);
+  //   setSession(currentSession.data.session);
+  // };
 
   useEffect(() => {
-    fetchSession();
+    const initAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+      setAuthLoading(false);
+    };
+
+    initAuth();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
@@ -32,6 +39,10 @@ function App() {
   const logout = async () => {
     await supabase.auth.signOut();
   };
+
+  if (authLoading) {
+    return null;
+  }
 
   return (
     <>

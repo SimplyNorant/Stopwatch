@@ -372,16 +372,21 @@ function TimeTask({
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
-  const intervalRef = useRef(0);
-  const startTimeRef = useRef(0);
-  const savedTimeRef = useRef(0);
+  const [, forceRender] = useState(0);
+  const startTimeRef = useRef<null | number>(0);
+
+  // Time Logic (Time is derived)
+  const displayTime =
+    isRunning && startTimeRef.current
+      ? time + (Date.now() - startTimeRef.current)
+      : time;
 
   const soundEnd = playSound(`audio/${soundEndName}`, 0.3);
 
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id });
 
-  // Dragging properties
+  // Dragging Properties
   const style = {
     transition,
     transform: transform
@@ -394,87 +399,102 @@ function TimeTask({
       : undefined,
   };
 
+  // Loading Time and the date of starting (if exists)
   useEffect(() => {
-    fetchTime();
-  }, []);
+    const load = async () => {
+      const { error, data } = await supabase
+        .from("tasks")
+        .select("time, started_at")
+        .eq("id", id)
+        .single();
 
-  // Time Logic
-  useEffect(() => {
-    if (isRunning) {
-      startTimeRef.current = Date.now() - savedTimeRef.current;
-
-      intervalRef.current = setInterval(() => {
-        let currentTime = Date.now() - startTimeRef.current;
-        if (duration && currentTime > duration) {
-          clearInterval(intervalRef.current);
-          soundEnd.play();
-          setIsRunning(false);
-          setIsFinished(true);
-          currentTime = 0;
-          return;
-        }
-        setTime(currentTime);
-        changeTime(currentTime);
-        savedTimeRef.current = currentTime;
-      }, 10);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+      if (error) {
+        console.error("Whoops! While fetching: ", error.message);
+        return;
       }
-    }
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+      setTime(data.time);
+      if (data.started_at) {
+        startTimeRef.current = new Date(data.started_at).getTime();
+        setIsRunning(true);
       }
     };
+
+    load();
+  }, [id]);
+
+  // Rerendering Logic
+  useEffect(() => {
+    if (!isRunning) return;
+
+    let rafId: number;
+
+    const tick = () => {
+      forceRender((t) => t + 1);
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+
+    return () => cancelAnimationFrame(rafId);
   }, [isRunning]);
 
-  const fetchTime = async () => {
-    const { error, data } = await supabase
-      .from("tasks")
-      .select("time")
-      .eq("id", id);
+  // Timer Logic
+  useEffect(() => {
+    if (!duration || !isRunning) return;
 
-    if (error) {
-      console.error("Whoops! While fetching: ", error.message);
-      return;
+    if (displayTime >= duration) {
+      setIsRunning(false);
+      setIsFinished(true);
+      soundEnd.play();
     }
-
-    savedTimeRef.current = data[0].time;
-    setTime(data[0].time);
-  };
-
-  const changeTime = async (change: number) => {
-    const { error } = await supabase
-      .from("tasks")
-      .update({ time: change })
-      .eq("id", id);
-
-    if (error) {
-      console.log("Whoops! Couldn't change time: ", error.message);
-      return;
-    }
-  };
+  }, [displayTime]);
 
   const startStop = async () => {
     if (isFinished) await reset();
-    setIsRunning(!isRunning);
+
+    if (isRunning) {
+      if (!startTimeRef.current) return;
+
+      const elapsed = time + (Date.now() - startTimeRef.current);
+
+      startTimeRef.current = null;
+      setTime(elapsed);
+      setIsRunning(false);
+
+      await supabase
+        .from("tasks")
+        .update({
+          time: elapsed,
+          started_at: null,
+        })
+        .eq("id", id);
+    } else {
+      const now = new Date().toISOString();
+
+      startTimeRef.current = Date.now();
+      setIsRunning(true);
+
+      await supabase.from("tasks").update({ started_at: now }).eq("id", id);
+    }
   };
 
   const reset = async () => {
+    startTimeRef.current = null;
     setIsRunning(false);
     setTime(0);
-    savedTimeRef.current = 0;
     if (duration) {
       soundEnd.stop();
       setIsFinished(false);
     }
 
-    if (isRunning) {
-      startTimeRef.current = Date.now();
-    }
-
+    await supabase
+      .from("tasks")
+      .update({
+        time: 0,
+        started_at: null,
+      })
+      .eq("id", id);
     const { error } = await supabase
       .from("tasks")
       .update({ time: 0 })
@@ -546,7 +566,7 @@ function TimeTask({
             Time! ({formatTime(0).slice(0, formatTime(0).length - 3)})
           </div>
         ) : (
-          <div>{formatTime(time)}</div>
+          <div>{formatTime(displayTime)}</div>
         )}
 
         {/* Handle for dragging */}
