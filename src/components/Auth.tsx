@@ -61,6 +61,11 @@ export const Auth = () => {
   return (
     <div className="max-w-100 mx-auto my-0 p-4 text-2xl space-y-2 text-center text-font **:border-black">
       <Modal open={isDialogOpen} onClose={() => setIsDialogOpen(false)} />
+      <div className="flex justify-center items-center gap-2">
+        <img src="images/clock.png" alt="Pixelized Clock" className="w-10" />
+        <h1 className="text-4xl">Stopwatches</h1>
+      </div>
+
       <h2 className="text-3xl">{isSignUp ? "Sign Up" : "Sign In"}</h2>
       <form onSubmit={handleSubmit}>
         <div className="mb-2">

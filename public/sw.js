@@ -24,20 +24,33 @@ self.addEventListener("message", (event) => {
   const data = event.data;
   if (!data) return;
 
+  const { taskId, name } = data;
+
   if (data.type === "TIMER_DONE") {
     self.registration.showNotification("⏰ Timer finished", {
-      body: data.name,
+      body: name,
+      tag: `timer-${taskId}`,
       requireInteraction: true,
       data: {
-        taskId: data.taskId,
+        taskId: taskId,
       },
       actions: [
         { action: "restart", title: "Restart" },
         { action: "reset", title: "Reset" },
       ],
-      // icon: "/timer.png", // optional
-      // badge: "/timer-badge.png", // optional
+      // icon: "/timer.png",
+      // badge: "/timer-badge.png",
     });
+  }
+
+  if (data?.type === "CLOSE_TIMER_NOTIFICATION") {
+    self.registration
+      .getNotifications({
+        tag: `timer-${taskId}`,
+      })
+      .then((notifications) => {
+        notifications.forEach((n) => n.close());
+      });
   }
 });
 

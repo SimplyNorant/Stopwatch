@@ -233,7 +233,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
             onDragEnd={(e) => handleDragEnd(e, true)}
             collisionDetection={closestCorners}
           >
-            <div className="flex flex-col items-center gap-4 touch-none">
+            <div className="flex flex-col items-center gap-4">
               <SortableContext
                 items={stopwatchList}
                 strategy={verticalListSortingStrategy}
@@ -346,7 +346,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
             onDragEnd={(e) => handleDragEnd(e, false)}
             collisionDetection={closestCorners}
           >
-            <div className="flex flex-col items-center gap-4 touch-none">
+            <div className="flex flex-col items-center gap-4">
               <SortableContext
                 items={timerList}
                 strategy={verticalListSortingStrategy}
@@ -436,6 +436,16 @@ function TimeTask({
       type: "TIMER_DONE",
       taskId: id,
       name,
+    });
+  };
+
+  const closeNotification = async () => {
+    if (!("serviceWorker" in navigator)) return;
+
+    const reg = await navigator.serviceWorker.ready;
+    reg.active?.postMessage({
+      type: "CLOSE_TIMER_NOTIFICATION",
+      taskId: id,
     });
   };
 
@@ -564,12 +574,13 @@ function TimeTask({
   }, []);
 
   const startStop = async () => {
-    await requestNotificationPermission();
-
     if (isFinished) await reset();
 
     if (isRunning) await stop();
     else await start();
+
+    await closeNotification();
+    await requestNotificationPermission();
   };
 
   const start = async () => {
@@ -623,6 +634,8 @@ function TimeTask({
     soundEnd.stop();
     document.title = "Stopwatches"; // Possible to use a variable for this, in case I'd want to change the website's name
     setIsFinished(false);
+
+    await closeNotification();
 
     const { error } = await supabase
       .from("tasks")
@@ -705,7 +718,7 @@ function TimeTask({
         <div
           {...listeners}
           {...attributes}
-          className="absolute top-6 -left-7 cursor-grab active:cursor-grabbing"
+          className="absolute top-6 -left-7 cursor-grab active:cursor-grabbing touch-none"
         >
           <RxDragHandleDots2 size={25} />
         </div>

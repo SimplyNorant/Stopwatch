@@ -11,7 +11,7 @@ export default function DarkModeToggle() {
       document.documentElement.classList.toggle("dark", stored === "dark");
     } else {
       const prefersDark = window.matchMedia(
-        "(prefers-color-scheme: dark)"
+        "(prefers-color-scheme: dark)",
       ).matches;
       setDark(prefersDark);
       document.documentElement.classList.toggle("dark", prefersDark);
@@ -28,9 +28,9 @@ export default function DarkModeToggle() {
   return (
     <button
       onClick={toggle}
-      className="rounded-lg px-4 py-2 bg-foreground dark:text-white"
+      className="rounded-lg px-3 py-2 bg-foreground dark:text-white"
     >
-      {dark ? "☀️ Light" : "🌙 Dark"}
+      {dark ? "☀️" : "🌙"}
     </button>
   );
 }
