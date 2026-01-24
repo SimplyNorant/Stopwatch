@@ -9,12 +9,16 @@ function App() {
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // const fetchSession = async () => {
-  //   const currentSession = await supabase.auth.getSession();
-  //   console.log(currentSession);
-  //   console.log(currentSession.data.session?.user.email);
-  //   setSession(currentSession.data.session);
-  // };
+  // Service Worker
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then(() => console.log("Service Worker registered"))
+        .catch((err) => console.error("SW registration failed:", err));
+    }
+  }, []);
+
   useEffect(() => {
     if (!navigator.serviceWorker) return;
 

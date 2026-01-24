@@ -71,7 +71,6 @@ export default function StopwatchSystem({ session }: { session: Session }) {
         },
         (payload) => {
           const newTask = payload.new as Task;
-          console.log(newTask);
           if (newTask.duration === 0) {
             setStopwatchList((prev) => [...prev, newTask]);
           } else {
@@ -88,7 +87,6 @@ export default function StopwatchSystem({ session }: { session: Session }) {
         },
         (payload) => {
           const oldTask = payload.old;
-          console.log(oldTask);
 
           setStopwatchList((prev) => prev.filter((el) => el.id !== oldTask.id));
           setTimerList((prev) => prev.filter((el) => el.id !== oldTask.id));
@@ -127,7 +125,6 @@ export default function StopwatchSystem({ session }: { session: Session }) {
       console.error("Whoops! Couldn't add it: ", error.message);
       return;
     }
-    setStopwatchList(stopwatchList);
   };
 
   const addTimer = async (e: any) => {
@@ -146,7 +143,24 @@ export default function StopwatchSystem({ session }: { session: Session }) {
       console.error("Whoops! Couldn't add it: ", error.message);
       return;
     }
-    setTimerList(timerList);
+  };
+
+  const deleteTask = async (duration: number, id: number) => {
+    const isStopwatch = duration === 0;
+
+    // Optimistic UI removal
+    if (isStopwatch) {
+      setStopwatchList((prev) => prev.filter((t) => t.id !== id));
+    } else {
+      setTimerList((prev) => prev.filter((t) => t.id !== id));
+    }
+
+    // Server delete
+    const { error } = await supabase.from("tasks").delete().eq("id", id);
+
+    if (error) {
+      console.error("Delete failed: ", error);
+    }
   };
 
   const handleDragEnd = async (e: any, isStopwatch: boolean) => {
@@ -233,6 +247,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                       name={el.title}
                       id={el.id}
                       duration={0}
+                      onDelete={deleteTask}
                     />
                   ))
                 )}
@@ -346,6 +361,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                       id={el.id}
                       duration={el.duration}
                       soundEndName={endSound}
+                      onDelete={deleteTask}
                     />
                   ))
                 )}
@@ -363,11 +379,13 @@ function TimeTask({
   id,
   duration,
   soundEndName,
+  onDelete,
 }: {
   name: string;
   id: number;
   duration: number;
   soundEndName?: string;
+  onDelete: Function;
 }) {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
@@ -411,8 +429,7 @@ function TimeTask({
   };
 
   const showNotification = async () => {
-    // if (!("serviceWorker" in navigator)) return;
-    // if (Notification.permission !== "granted") return;
+    if (Notification.permission !== "granted") return;
 
     const reg = await navigator.serviceWorker.ready;
     reg.active?.postMessage({
@@ -421,16 +438,6 @@ function TimeTask({
       name,
     });
   };
-
-  // Service Worker
-  useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker
-        .register("/sw.js")
-        .then(() => console.log("Service Worker registered"))
-        .catch((err) => console.error("SW registration failed:", err));
-    }
-  }, []);
 
   useEffect(() => {
     const onReset = (e: any) => {
@@ -523,15 +530,14 @@ function TimeTask({
 
     const remaining = endTimeRef.current - Date.now();
     if (remaining <= 0) {
-      // Handle immediately
+      // Handle immediate
       setIsRunning(false);
       setIsFinished(true);
       soundEnd.play();
 
-      // if (document.visibilityState !== "visible") {
-      //   showNotification();
-      // }
-      showNotification();
+      if (document.visibilityState !== "visible") {
+        showNotification();
+      }
 
       document.title = "⏰ Time's up!";
       return;
@@ -543,16 +549,19 @@ function TimeTask({
 
       soundEnd.play();
 
-      // if (document.visibilityState !== "visible") {
-      //   showNotification();
-      // }
-      showNotification();
+      if (document.visibilityState !== "visible") {
+        showNotification();
+      }
 
       document.title = "⏰ Time's up!";
     }, remaining);
 
     return () => clearTimeout(timeout);
   }, [isRunning, duration]);
+
+  useEffect(() => {
+    return () => soundEnd.stop();
+  }, []);
 
   const startStop = async () => {
     await requestNotificationPermission();
@@ -663,7 +672,7 @@ function TimeTask({
         </div>
 
         <button
-          onClick={() => deleteStopwatch(id)}
+          onClick={() => onDelete(duration, id)}
           className="text-delete hover:text-red-800 transition absolute right-0 z-1"
         >
           <svg
