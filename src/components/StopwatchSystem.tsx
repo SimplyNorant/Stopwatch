@@ -375,6 +375,7 @@ function TimeTask({
   const [, forceRender] = useState(0);
   const startTimeRef = useRef<null | number>(null);
   const endTimeRef = useRef<number | null>(null);
+  const rafRef = useRef<number | null>(null);
 
   // Time Logic (Time is derived)
   const displayTime =
@@ -416,6 +417,7 @@ function TimeTask({
     const reg = await navigator.serviceWorker.ready;
     reg.active?.postMessage({
       type: "TIMER_DONE",
+      taskId: id,
       name,
     });
   };
@@ -429,6 +431,27 @@ function TimeTask({
         .catch((err) => console.error("SW registration failed:", err));
     }
   }, []);
+
+  useEffect(() => {
+    const onReset = (e: any) => {
+      if (e.detail.taskId === id) {
+        reset();
+      }
+    };
+
+    const onRestart = (e: any) => {
+      if (e.detail.taskId === id) {
+        restart();
+      }
+    };
+
+    window.addEventListener("timer-reset", onReset);
+    window.addEventListener("timer-restart", onRestart);
+    return () => {
+      window.removeEventListener("timer-reset", onReset);
+      window.removeEventListener("timer-restart", onRestart);
+    };
+  }, [id]);
 
   // Loading Time and the date of starting (if exists)
   useEffect(() => {
@@ -479,16 +502,19 @@ function TimeTask({
   useEffect(() => {
     if (!isRunning) return;
 
-    let rafId: number;
-
     const tick = () => {
       forceRender((t) => t + 1);
-      rafId = requestAnimationFrame(tick);
+      rafRef.current = requestAnimationFrame(tick);
     };
 
-    rafId = requestAnimationFrame(tick);
+    rafRef.current = requestAnimationFrame(tick);
 
-    return () => cancelAnimationFrame(rafId);
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
   }, [isRunning]);
 
   // Timer Logic
@@ -533,59 +559,68 @@ function TimeTask({
 
     if (isFinished) await reset();
 
-    if (isRunning) {
-      if (!startTimeRef.current) return;
+    if (isRunning) await stop();
+    else await start();
+  };
 
-      const elapsed = time + (Date.now() - startTimeRef.current);
+  const start = async () => {
+    const now = Date.now();
 
-      startTimeRef.current = null;
-      endTimeRef.current = null;
+    startTimeRef.current = now;
+    endTimeRef.current = duration ? now + (duration - time) : null;
 
-      setTime(elapsed);
-      setIsRunning(false);
+    setIsRunning(true);
 
-      await supabase
-        .from("tasks")
-        .update({
-          time: elapsed,
-          started_at: null,
-        })
-        .eq("id", id);
-    } else {
-      const now = Date.now();
+    await supabase
+      .from("tasks")
+      .update({ started_at: new Date(now).toISOString() })
+      .eq("id", id);
+  };
 
-      startTimeRef.current = now;
-      endTimeRef.current = duration ? now + (duration - time) : null;
+  const stop = async () => {
+    if (!startTimeRef.current) return;
 
-      setIsRunning(true);
+    const elapsed = time + (Date.now() - startTimeRef.current);
 
-      await supabase
-        .from("tasks")
-        .update({ started_at: new Date(now).toISOString() })
-        .eq("id", id);
-    }
+    startTimeRef.current = null;
+    endTimeRef.current = null;
+
+    setTime(elapsed);
+    setIsRunning(false);
+
+    await supabase
+      .from("tasks")
+      .update({
+        time: elapsed,
+        started_at: null,
+      })
+      .eq("id", id);
+  };
+
+  const restart = async () => {
+    await reset();
+    await start();
   };
 
   const reset = async () => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
     startTimeRef.current = null;
     setIsRunning(false);
     setTime(0);
-    if (isFinished) {
-      soundEnd.stop();
-      document.title = "Stopwatches"; // Possible to use a variable for this, in case I'd want to change the website's name
-      setIsFinished(false);
-    }
 
-    await supabase
+    soundEnd.stop();
+    document.title = "Stopwatches"; // Possible to use a variable for this, in case I'd want to change the website's name
+    setIsFinished(false);
+
+    const { error } = await supabase
       .from("tasks")
       .update({
         time: 0,
         started_at: null,
       })
-      .eq("id", id);
-    const { error } = await supabase
-      .from("tasks")
-      .update({ time: 0 })
       .eq("id", id);
 
     if (error) {

@@ -15,6 +15,29 @@ function App() {
   //   console.log(currentSession.data.session?.user.email);
   //   setSession(currentSession.data.session);
   // };
+  useEffect(() => {
+    if (!navigator.serviceWorker) return;
+
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === "TIMER_RESET") {
+        window.dispatchEvent(
+          new CustomEvent("timer-reset", {
+            detail: { taskId: event.data.taskId },
+          }),
+        );
+      } else if (event.data?.type === "TIMER_RESTART") {
+        window.dispatchEvent(
+          new CustomEvent("timer-restart", {
+            detail: { taskId: event.data.taskId },
+          }),
+        );
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", handler);
+    return () =>
+      navigator.serviceWorker.removeEventListener("message", handler);
+  }, []);
 
   useEffect(() => {
     const initAuth = async () => {
