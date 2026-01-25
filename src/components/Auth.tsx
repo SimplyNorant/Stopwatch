@@ -1,13 +1,19 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import supabase from "../supabase-client";
 import { z } from "zod";
 import { Modal } from "../assets/dialog";
+
+import { RiEyeCloseLine } from "react-icons/ri";
+import { RiEyeLine } from "react-icons/ri";
 
 export const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<any>(false);
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const signUpSchema = z.object({
@@ -59,23 +65,47 @@ export const Auth = () => {
   };
 
   return (
-    <div className="max-w-100 mx-auto my-0 p-4 text-2xl space-y-2 text-center text-font **:border-black">
+    <div className="max-w-100 mx-auto p-4 text-2xl space-y-2 text-center text-font bg-foreground border border-black rounded-2xl **:border-black shadow-xl/5">
       <Modal open={isDialogOpen} onClose={() => setIsDialogOpen(false)} />
       <div className="flex justify-center items-center gap-2">
         <img src="images/clock.png" alt="Pixelized Clock" className="w-10" />
         <h1 className="text-4xl">Stopwatches</h1>
       </div>
-
-      <h2 className="text-3xl">{isSignUp ? "Sign Up" : "Sign In"}</h2>
       <form onSubmit={handleSubmit}>
-        <div className="mb-2">
+        <div className="">
+          <h2 className="text-3xl">{isSignUp ? "Register" : "Sign in"}</h2>
+          <div className="flex justify-center items-center">
+            <p>{isSignUp ? "Have account?" : "No account?"}</p>
+            <button
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+              }}
+              type="button"
+              className="py-2 px-4 mr-2 underline hover:text-gray-400 transition"
+            >
+              {isSignUp ? "Sign in" : "Register"}
+            </button>
+          </div>
+        </div>
+        <button
+          onClick={signWithGoogle}
+          className="py-2 px-4 mb-2 bg-gray-200 dark:bg-gray-600 transition rounded shadow-xl/5"
+        >
+          <img
+            src="images/google_icon.png"
+            alt="google icon"
+            className="w-8 inline mr-2"
+          />
+          Google
+        </button>
+        <div className="mb-2 focus-within:border-red-300">
           <input
             type="email"
             name="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-2 border-2 rounded outline-gray-600"
+            className="w-full p-2 border-2 rounded focus:border-gray-300 outline-none"
             required
           />
           {errors && (
@@ -85,14 +115,25 @@ export const Auth = () => {
           )}
         </div>
         <div className="mb-2">
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-2 border-2 rounded outline-gray-600"
-            required
-          />
+          <div className="flex border-2 rounded p-2 focus-within:border-gray-300">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full outline-none"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((s) => !s)}
+              className="ml-2"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <RiEyeLine /> : <RiEyeCloseLine />}
+            </button>
+          </div>
+
           {errors && (
             <div className="justify-self-start text-start text-red-600">
               {errors.password?.[0]}
@@ -100,28 +141,41 @@ export const Auth = () => {
             </div>
           )}
         </div>
-        <button
-          type="submit"
-          className="py-2 px-4 mr-2 bg-foreground hover:bg-gray-300 dark:hover:bg-gray-500 transition rounded shadow-xl/5"
-        >
-          {isSignUp ? "Sign Up" : "Sign In"}
-        </button>
+        <div>
+          <button
+            type="submit"
+            className="py-2 px-4 mr-2 bg-gray-300 dark:bg-gray-500 hover:bg-gray-400 dark:hover:bg-gray-700 transition rounded shadow-xl/5"
+          >
+            {isSignUp ? "Create account" : "Sign In"}
+          </button>
+          {isSignUp ? (
+            ""
+          ) : (
+            <button
+              type="button"
+              className="py-2 px-4 mr-2 bg-gray-300 dark:bg-gray-500 hover:bg-gray-400 dark:hover:bg-gray-700 transition rounded shadow-xl/5"
+            >
+              <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
+                Forgot password?
+              </a>
+            </button>
+          )}
+        </div>
+        {isSignUp ? (
+          <div className="flex text-start text-sm mt-2 items-center">
+            <input type="checkbox" className="mr-2 size-4" required />
+            <p className="mr-1">By signing up you agree to our</p>
+            <Link
+              to={"/PrivacyPolicy"}
+              className="underline hover:text-gray-400 transition"
+            >
+              Privacy Policy
+            </Link>
+          </div>
+        ) : (
+          ""
+        )}
       </form>
-      {/* Requires change */}
-      <button
-        onClick={signWithGoogle}
-        className="py-2 px-4 bg-orange-300 hover:bg-orange-400 dark:bg-orange-600 dark:hover:bg-orange-700  transition rounded shadow-xl/5"
-      >
-        With Google
-      </button>
-      <button
-        onClick={() => {
-          setIsSignUp(!isSignUp);
-        }}
-        className="py-2 px-4 bg-foreground hover:bg-gray-300 dark:hover:bg-gray-500 transition rounded shadow-xl/5"
-      >
-        {isSignUp ? "Switch to Sign In" : "Switch to Sign Up"}
-      </button>
     </div>
   );
 };

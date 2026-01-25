@@ -95,10 +95,12 @@ function App() {
           <div className="flex justify-end m-1">
             <DarkModeToggle />
           </div>
-          <Auth />
+          <div className="mt-[10vh]">
+            <Auth />
+          </div>
         </>
       )}
-      <div className="text-center text-font mt-[50%] mb-5 hover:text-gray-400 transition">
+      <div className="text-center text-font mt-[60vh] mb-5 hover:text-gray-400 transition">
         <Link to={"/PrivacyPolicy"}>Privacy Policy</Link>
       </div>
     </>
