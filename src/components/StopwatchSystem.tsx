@@ -651,16 +651,6 @@ function TimeTask({
     }
   };
 
-  const deleteStopwatch = async (id: number) => {
-    const { error } = await supabase.from("tasks").delete().eq("id", id);
-    soundEnd.stop();
-
-    if (error) {
-      console.error("Whoops! Couldn't delete: ", error.message);
-      return;
-    }
-  };
-
   const formatTime = (timeInMs: number) => {
     if (duration) {
       timeInMs = duration - timeInMs;

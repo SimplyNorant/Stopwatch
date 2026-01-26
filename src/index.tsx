@@ -5,15 +5,17 @@ import "./index.css";
 import App from "./App.tsx";
 import NotFoundPage from "./components/NotFoundPage.tsx";
 import PrivacyPolicy from "./components/PrivacyPolicy.tsx";
+import ResetPassword from "./components/ResetPassword.tsx";
 
 const router = createBrowserRouter([
   { path: "/", element: <App /> },
   { path: "/PrivacyPolicy", element: <PrivacyPolicy /> },
+  { path: "/reset-password", element: <ResetPassword /> },
   { path: "*", element: <NotFoundPage /> },
 ]);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <RouterProvider router={router} />
-  </StrictMode>
+  </StrictMode>,
 );

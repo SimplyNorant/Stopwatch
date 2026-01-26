@@ -16,6 +16,9 @@ export const Auth = () => {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+
   const signUpSchema = z.object({
     email: z.email({ error: "Incorrect email!" }),
     password: z.string().min(6, { error: "At least 6 symbols are required!" }),
@@ -58,9 +61,37 @@ export const Auth = () => {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setErrors({ email: ["Enter your email first"] });
+      return;
+    }
+
+    setResetLoading(true);
+    setErrors(false);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    // IMPORTANT: always show success (security)
+    setResetLoading(false);
+    setResetSent(true);
+
+    if (error) {
+      console.error("Password reset error:", error.message);
+    }
+  };
+
   const signWithGoogle = async () => {
     await supabase.auth.signInWithOAuth({
       provider: "google",
+    });
+  };
+
+  const signWithGitHub = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "github",
     });
   };
 
@@ -87,17 +118,32 @@ export const Auth = () => {
             </button>
           </div>
         </div>
-        <button
-          onClick={signWithGoogle}
-          className="py-2 px-4 mb-2 bg-gray-200 dark:bg-gray-600 transition rounded shadow-xl/5"
-        >
-          <img
-            src="images/google_icon.png"
-            alt="google icon"
-            className="w-8 inline mr-2"
-          />
-          Google
-        </button>
+        <div className="flex gap-2 justify-center">
+          <button
+            onClick={signWithGoogle}
+            type="button"
+            className="py-2 px-4 mb-2 bg-gray-200 dark:bg-gray-600 transition rounded shadow-xl/5"
+          >
+            <img
+              src="images/google_icon.png"
+              alt="google icon"
+              className="w-8 inline mr-2"
+            />
+            Google
+          </button>
+          <button
+            onClick={signWithGitHub}
+            type="button"
+            className="py-2 px-4 mb-2 bg-gray-200 dark:bg-gray-600 transition rounded shadow-xl/5"
+          >
+            <img
+              src="images/github_icon.png"
+              alt="google icon"
+              className="w-8 inline mr-2"
+            />
+            GitHub
+          </button>
+        </div>
         <div className="mb-2 focus-within:border-red-300">
           <input
             type="email"
@@ -153,11 +199,11 @@ export const Auth = () => {
           ) : (
             <button
               type="button"
+              onClick={handleForgotPassword}
+              disabled={resetLoading}
               className="py-2 px-4 mr-2 bg-gray-300 dark:bg-gray-500 hover:bg-gray-400 dark:hover:bg-gray-700 transition rounded shadow-xl/5"
             >
-              <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
-                Forgot password?
-              </a>
+              {resetLoading ? "Sending..." : "Forgot password?"}
             </button>
           )}
         </div>
@@ -174,6 +220,12 @@ export const Auth = () => {
           </div>
         ) : (
           ""
+        )}
+        {resetSent && (
+          <div className="text-sm text-green-600 mt-2">
+            If an account exists for this email, a password reset link has been
+            sent.
+          </div>
         )}
       </form>
     </div>
