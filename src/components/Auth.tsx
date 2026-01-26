@@ -74,7 +74,6 @@ export const Auth = () => {
       redirectTo: `${window.location.origin}/reset-password`,
     });
 
-    // IMPORTANT: always show success (security)
     setResetLoading(false);
     setResetSent(true);
 
@@ -187,26 +186,24 @@ export const Auth = () => {
             </div>
           )}
         </div>
-        <div>
+        <button
+          type="submit"
+          className="w-full py-2 px-4 mr-2 bg-gray-300 dark:bg-gray-500 hover:bg-gray-400 dark:hover:bg-gray-700 transition rounded shadow-xl/5"
+        >
+          {isSignUp ? "Create account" : "Sign In"}
+        </button>
+        {isSignUp ? (
+          ""
+        ) : (
           <button
-            type="submit"
-            className="py-2 px-4 mr-2 bg-gray-300 dark:bg-gray-500 hover:bg-gray-400 dark:hover:bg-gray-700 transition rounded shadow-xl/5"
+            type="button"
+            onClick={handleForgotPassword}
+            disabled={resetLoading}
+            className="text-sm underline hover:text-gray-400 transition"
           >
-            {isSignUp ? "Create account" : "Sign In"}
+            {resetLoading ? "Sending..." : "Forgot password?"}
           </button>
-          {isSignUp ? (
-            ""
-          ) : (
-            <button
-              type="button"
-              onClick={handleForgotPassword}
-              disabled={resetLoading}
-              className="py-2 px-4 mr-2 bg-gray-300 dark:bg-gray-500 hover:bg-gray-400 dark:hover:bg-gray-700 transition rounded shadow-xl/5"
-            >
-              {resetLoading ? "Sending..." : "Forgot password?"}
-            </button>
-          )}
-        </div>
+        )}
         {isSignUp ? (
           <div className="flex text-start text-sm mt-2 items-center">
             <input type="checkbox" className="mr-2 size-4" required />
