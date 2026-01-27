@@ -60,6 +60,8 @@ export default function StopwatchSystem({ session }: { session: Session }) {
   }, []);
 
   useEffect(() => {
+    if (!session?.user) return;
+
     const channel = supabase.channel("tasks-channel");
     channel
       .on(
@@ -68,6 +70,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
           event: "INSERT",
           schema: "public",
           table: "tasks",
+          filter: `email=eq.${session.user.email}`,
         },
         (payload) => {
           const newTask = payload.new as Task;
@@ -84,6 +87,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
           event: "DELETE",
           schema: "public",
           table: "tasks",
+          filter: `email=eq.${session.user.email}`,
         },
         (payload) => {
           const oldTask = payload.old;
@@ -96,9 +100,9 @@ export default function StopwatchSystem({ session }: { session: Session }) {
         console.log("Subscription: ", status);
       });
     return () => {
-      channel.unsubscribe();
+      supabase.removeChannel(channel);
     };
-  }, []);
+  }, [session?.access_token]);
 
   const fetchTasks = async () => {
     const { data, error } = await supabase

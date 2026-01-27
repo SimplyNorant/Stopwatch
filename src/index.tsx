@@ -8,7 +8,7 @@ import PrivacyPolicy from "./components/PrivacyPolicy.tsx";
 import ResetPassword from "./components/ResetPassword.tsx";
 
 const router = createBrowserRouter([
-  { path: "/", element: <App /> },
+  { path: "/", element: <App />, errorElement: <NotFoundPage /> },
   { path: "/PrivacyPolicy", element: <PrivacyPolicy /> },
   { path: "/reset-password", element: <ResetPassword /> },
   { path: "*", element: <NotFoundPage /> },
