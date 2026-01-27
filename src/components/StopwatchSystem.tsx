@@ -391,15 +391,25 @@ function TimeTask({
   const [isRunning, setIsRunning] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [, forceRender] = useState(0);
+
   const startTimeRef = useRef<null | number>(null);
   const endTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
 
   // Time Logic (Time is derived)
-  const displayTime =
-    isRunning && startTimeRef.current
-      ? time + (Date.now() - startTimeRef.current)
-      : time;
+  let displayTime = 0;
+
+  if (isRunning && startTimeRef.current) {
+    const elapsed = time + (Date.now() - startTimeRef.current);
+
+    if (duration && elapsed >= duration) {
+      displayTime = elapsed - duration; // Overtime
+    } else {
+      displayTime = elapsed;
+    }
+  } else {
+    displayTime = time;
+  }
 
   const soundEnd = playSound(`audio/${soundEndName}`, 0.3);
 
@@ -497,10 +507,10 @@ function TimeTask({
 
         // TIMER ALREADY FINISHED
         if (total >= duration) {
-          setIsRunning(false);
           setIsFinished(true);
-
-          showNotification();
+          if (document.visibilityState !== "visible") {
+            showNotification();
+          }
 
           return;
         }
@@ -540,21 +550,15 @@ function TimeTask({
 
     const remaining = endTimeRef.current - Date.now();
     if (remaining <= 0) {
-      // Handle immediate
-      setIsRunning(false);
       setIsFinished(true);
       soundEnd.play();
-
       if (document.visibilityState !== "visible") {
         showNotification();
       }
-
       document.title = "⏰ Time's up!";
-      return;
     }
 
     const timeout = setTimeout(() => {
-      setIsRunning(false);
       setIsFinished(true);
 
       soundEnd.play();
@@ -574,7 +578,10 @@ function TimeTask({
   }, []);
 
   const startStop = async () => {
-    if (isFinished) await reset();
+    if (isFinished) {
+      restart();
+      return;
+    }
 
     if (isRunning) await stop();
     else await start();
@@ -652,7 +659,7 @@ function TimeTask({
   };
 
   const formatTime = (timeInMs: number) => {
-    if (duration) {
+    if (duration && !isFinished) {
       timeInMs = duration - timeInMs;
     }
     const hours = Math.floor(timeInMs / 3600000);
@@ -699,7 +706,9 @@ function TimeTask({
         {isFinished ? (
           <div className="text-delete">
             Time! ({formatTime(0).slice(0, formatTime(0).length - 3)})
-            <div className="absolute left-20 text-sm">Overtime: </div>
+            <div className="absolute bottom-0.5 left-15 text-sm">
+              Overtime: +{formatTime(displayTime)}
+            </div>
           </div>
         ) : (
           <div>{formatTime(displayTime)}</div>
