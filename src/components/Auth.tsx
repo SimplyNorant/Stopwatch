@@ -30,11 +30,9 @@ export const Auth = () => {
     const validation = signUpSchema.safeParse({ email, password });
     if (!validation.success) {
       const CurrErrors = validation.error.flatten().fieldErrors;
-      console.error(CurrErrors);
       setErrors(CurrErrors);
       return;
     } else {
-      console.log(validation.data);
       setErrors(false);
     }
     if (isSignUp) {

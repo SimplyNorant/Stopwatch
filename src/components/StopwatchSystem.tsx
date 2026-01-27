@@ -699,6 +699,7 @@ function TimeTask({
         {isFinished ? (
           <div className="text-delete">
             Time! ({formatTime(0).slice(0, formatTime(0).length - 3)})
+            <div className="absolute left-20 text-sm">Overtime: </div>
           </div>
         ) : (
           <div>{formatTime(displayTime)}</div>
