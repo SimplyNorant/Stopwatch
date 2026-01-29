@@ -16,11 +16,13 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+
 import { RxDragHandleDots2 } from "react-icons/rx";
+import { TiPencil } from "react-icons/ti";
+
 import supabase from "../supabase-client";
 import type { Session } from "@supabase/supabase-js";
 import { playSound } from "../actions";
-// import Spinner from "../assets/spinner";
 import StopwatchSkeletonList from "../assets/skeleton";
 
 interface Task {
@@ -31,6 +33,13 @@ interface Task {
   duration: number;
   position: number;
 }
+
+// interface EditableTask {
+//   id: number;
+//   title: string;
+//   duration: number;
+//   time: number;
+// }
 
 export default function StopwatchSystem({ session }: { session: Session }) {
   const [loading, setLoading] = useState(true);
@@ -49,6 +58,8 @@ export default function StopwatchSystem({ session }: { session: Session }) {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
+
+  // const [editingTask, setEditingTask] = useState<EditableTask | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -248,10 +259,9 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                   stopwatchList.map((el) => (
                     <TimeTask
                       key={el.id}
-                      name={el.title}
-                      id={el.id}
-                      duration={0}
+                      task={el}
                       onDelete={deleteTask}
+                      // onEdit={() => setEditingTask(el)}
                     />
                   ))
                 )}
@@ -361,11 +371,10 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                   timerList.map((el) => (
                     <TimeTask
                       key={el.id}
-                      name={el.title}
-                      id={el.id}
-                      duration={el.duration}
+                      task={el}
                       soundEndName={endSound}
                       onDelete={deleteTask}
+                      // onEdit={() => setEditingTask(el)}
                     />
                   ))
                 )}
@@ -374,23 +383,42 @@ export default function StopwatchSystem({ session }: { session: Session }) {
           </DndContext>
         </div>
       </div>
+      {/* {editingTask && (
+        <EditTaskModal
+          task={editingTask}
+          onClose={() => setEditingTask(null)}
+          onSave={async (updated) => {
+            await supabase
+              .from("tasks")
+              .update({
+                title: updated.title,
+                duration: updated.duration,
+                time: updated.time,
+              })
+              .eq("id", updated.id);
+
+            setEditingTask(null);
+            fetchTasks(); // or optimistic update
+          }}
+        />
+      )} */}
     </>
   );
 }
 
 function TimeTask({
-  name,
-  id,
-  duration,
+  task,
   soundEndName,
   onDelete,
+  // onEdit,
 }: {
-  name: string;
-  id: number;
-  duration: number;
+  task: Task;
   soundEndName?: string;
   onDelete: Function;
+  // onEdit: (task: EditableTask) => void;
 }) {
+  const { id, title, duration } = task;
+
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
@@ -449,7 +477,7 @@ function TimeTask({
     reg.active?.postMessage({
       type: "TIMER_DONE",
       taskId: id,
-      name,
+      name: title,
     });
   };
 
@@ -682,28 +710,40 @@ function TimeTask({
     <div ref={setNodeRef} style={style}>
       <div className="flex relative">
         <div className="text-3xl text-center mb-1 text-wrap wrap-anywhere w-80">
-          {name}
+          {title}
         </div>
-
-        <button
-          onClick={() => onDelete(duration, id)}
-          className="text-delete hover:text-red-800 transition absolute right-0 z-1"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth="1.5"
-            stroke="currentColor"
-            className="size-8"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M6 18 18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+        <div className="absolute right-0 z-1">
+          <div className="flex">
+            {/* <button
+              onClick={() => {
+                stop();
+                // onEdit({ id, title, duration, time });
+              }}
+              className="text-amber-600 hover:text-amber-800 transition"
+            >
+              <TiPencil size={25} />
+            </button> */}
+            <button
+              onClick={() => onDelete(duration, id)}
+              className="text-delete hover:text-red-800 transition "
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="currentColor"
+                className="size-8"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18 18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="relative bg-foreground text-center mb-2 text-3xl py-5 px-4 border rounded tracking-widest shadow-xl/10">
@@ -748,3 +788,53 @@ function TimeTask({
     </div>
   );
 }
+
+// function EditTaskModal({
+//   task,
+//   onClose,
+//   onSave,
+// }: {
+//   task: EditableTask;
+//   onClose: () => void;
+//   onSave: (updated: EditableTask) => void;
+// }) {
+//   const [title, setTitle] = useState(task.title);
+//   const [duration, setDuration] = useState(task.duration);
+//   const [time, setTime] = useState(task.time);
+
+//   return (
+//     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+//       <div className="bg-background p-6 rounded shadow-xl w-96">
+//         <h2 className="text-2xl mb-4">Edit task</h2>
+
+//         <label>Name</label>
+//         <input
+//           value={title}
+//           onChange={(e) => setTitle(e.target.value)}
+//           className="w-full border p-2 mb-4"
+//         />
+//         <input
+//           value={duration}
+//           onChange={(e: any) => setDuration(e.target.value)}
+//           className="w-full border p-2 mb-4"
+//         />
+//         <input
+//           value={time}
+//           onChange={(e: any) => setTime(e.target.value)}
+//           className="w-full border p-2 mb-4"
+//         />
+//         {/* Time inputs here */}
+
+//         <div className="flex justify-end gap-2">
+//           <button onClick={onClose}>Cancel</button>
+//           <button
+//             onClick={() => onSave({ ...task, title, duration, time })}
+//             className="bg-primary px-4 py-2 rounded"
+//           >
+//             Save
+//           </button>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }

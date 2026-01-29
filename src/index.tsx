@@ -6,9 +6,10 @@ import App from "./App.tsx";
 import NotFoundPage from "./components/NotFoundPage.tsx";
 import PrivacyPolicy from "./components/PrivacyPolicy.tsx";
 import ResetPassword from "./components/ResetPassword.tsx";
+import ErrorPage from "./components/ErrorPage.tsx";
 
 const router = createBrowserRouter([
-  { path: "/", element: <App />, errorElement: <NotFoundPage /> },
+  { path: "/", element: <App />, errorElement: <ErrorPage /> },
   { path: "/PrivacyPolicy", element: <PrivacyPolicy /> },
   { path: "/reset-password", element: <ResetPassword /> },
   { path: "*", element: <NotFoundPage /> },
