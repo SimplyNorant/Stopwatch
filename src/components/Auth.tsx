@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import supabase from "../supabase-client";
 import { z } from "zod";
+import Turnstile from "react-turnstile";
+
 import { Modal } from "../assets/dialog";
 
 import { RiEyeCloseLine } from "react-icons/ri";
@@ -13,6 +15,7 @@ export const Auth = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<any>(false);
+  const [captchaToken, setCaptchaToken] = useState();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -39,6 +42,7 @@ export const Auth = () => {
       const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: { captchaToken },
       });
       if (signUpError) {
         console.error("Error signing up:", signUpError.message);
@@ -50,6 +54,7 @@ export const Auth = () => {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
+        options: { captchaToken },
       });
       if (signInError) {
         console.error("Error signing up:", signInError.message);
@@ -184,6 +189,14 @@ export const Auth = () => {
             </div>
           )}
         </div>
+
+        <Turnstile
+          sitekey="0x4AAAAAACWHbXIzyzS_n_bn"
+          theme="dark"
+          onSuccess={(token: any) => {
+            setCaptchaToken(token);
+          }}
+        />
         <button
           type="submit"
           className="w-full py-2 px-4 mr-2 bg-gray-300 dark:bg-gray-500 hover:bg-gray-400 dark:hover:bg-gray-700 transition rounded shadow-xl/5"

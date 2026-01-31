@@ -18,7 +18,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 import { RxDragHandleDots2 } from "react-icons/rx";
-import { TiPencil } from "react-icons/ti";
+// import { TiPencil } from "react-icons/ti";
 
 import supabase from "../supabase-client";
 import type { Session } from "@supabase/supabase-js";
