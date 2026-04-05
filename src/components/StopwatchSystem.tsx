@@ -24,6 +24,7 @@ import supabase from "../supabase-client";
 import type { Session } from "@supabase/supabase-js";
 import { playSound } from "../actions";
 import StopwatchSkeletonList from "../assets/skeleton";
+import { Modal } from "../assets/AddItemDialog";
 
 interface Task {
   id: number;
@@ -46,6 +47,9 @@ export default function StopwatchSystem({ session }: { session: Session }) {
   // STOPWATCH
   const [stopwatchList, setStopwatchList] = useState<Task[]>([]);
   const [stopwatchInput, setStopwatchInput] = useState<string>("");
+
+  // MODAL
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // TIMER
   const [timerList, setTimerList] = useState<Task[]>([]);
@@ -219,30 +223,22 @@ export default function StopwatchSystem({ session }: { session: Session }) {
 
   return (
     <>
+      <Modal
+        open={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        session={session}
+      />
       <div className="mt-2 flex flex-col lg:flex-row justify-around gap-10 lg:gap-0 text-font **:border-black">
         <div className="flex flex-col items-center">
           {/* Stopwatches */}
           <h2 className="text-center text-4xl mb-2">My Stopwatches</h2>
           <button
             className="bg-primary w-sm rounded mb-2 text-3xl py-5 tracking-widest border shadow-xl/20 transition hover:-translate-y-0.5"
-            onClick={addStopwatch}
+            onClick={() => setIsDialogOpen(true)}
+            // onClick={addStopwatch}
           >
             Add Stopwatch
           </button>
-
-          <form className="text-center">
-            <label className="text-3xl" htmlFor="sname">
-              Stopwatch Name:
-            </label>
-            <br />
-            <textarea
-              value={stopwatchInput}
-              onInput={(e: any) => setStopwatchInput(e.target.value)}
-              id="sname"
-              name="sname"
-              className="w-sm py-5 text-3xl text-center text-wrap border-2 bg-foreground"
-            ></textarea>
-          </form>
           <DndContext
             sensors={sensors}
             onDragEnd={(e) => handleDragEnd(e, true)}
