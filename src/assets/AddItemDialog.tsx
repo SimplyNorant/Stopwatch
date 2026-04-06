@@ -3,14 +3,16 @@ import type { Session } from "@supabase/supabase-js";
 
 // TEMPORARY FOR TESTING
 import AddStopwatch from "./AddStopwatch";
+import AddTimer from "./AddTimer";
 
 type ModalProps = {
   open: boolean;
   onClose: () => void;
   session: Session;
+  isTimer: boolean;
 };
 
-export function Modal({ open, onClose, session }: ModalProps) {
+export function Modal({ open, onClose, session, isTimer }: ModalProps) {
   return (
     <Dialog open={open} onClose={onClose} className="relative z-50">
       {/* Backdrop */}
@@ -38,7 +40,11 @@ export function Modal({ open, onClose, session }: ModalProps) {
               />
             </svg>
           </button>
-          <AddStopwatch session={session} />
+          {isTimer ? (
+            <AddTimer session={session} />
+          ) : (
+            <AddStopwatch session={session} />
+          )}
         </DialogPanel>
       </div>
     </Dialog>
