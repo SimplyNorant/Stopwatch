@@ -23,20 +23,19 @@ export default function AddStopwatch({ session }: { session: Session }) {
   };
   return (
     <>
-      <form className="text-center">
+      <form className="text-center flex flex-col">
         <label className="text-3xl" htmlFor="sname">
           Stopwatch Name:
         </label>
-        <br />
         <textarea
           value={stopwatchInput}
           onInput={(e: any) => setStopwatchInput(e.target.value)}
           id="sname"
           name="sname"
-          className="w-sm py-5 text-3xl text-center text-wrap border-2 bg-foreground"
+          className="py-5 text-3xl text-center text-wrap border-2 bg-foreground"
         ></textarea>
         <button
-          className="bg-primary w-70 text-2xl border rounded py-2 mt-3 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
+          className="w-70 py-2 mt-3 mx-auto bg-primary text-2xl border rounded  tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
           onClick={(e: any) => addStopwatch(e)}
         >
           Create Stopwatch

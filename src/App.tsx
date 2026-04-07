@@ -9,6 +9,8 @@ function App() {
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
+  const [isProfileOn, setIsProfileOn] = useState(false);
+
   // Service Worker
   useEffect(() => {
     if ("serviceWorker" in navigator) {
@@ -75,7 +77,29 @@ function App() {
     <>
       {session ? (
         <>
-          <div className="flex justify-end items-center gap-2 m-1">
+          <div className="flex justify-end items-center gap-3 m-3">
+            <div className={isProfileOn ? "flex gap-2" : "hidden"}>
+              <DarkModeToggle />
+              <div className="p-2 bg-foreground rounded text-font">
+                {session?.user.email}
+              </div>
+
+              <button
+                onClick={logout}
+                className="p-2 w sm:w-20 bg-gray-300 hover:bg-gray-400 transition rounded shadow-xl/5"
+              >
+                Log Out
+              </button>
+            </div>
+            <button onClick={() => setIsProfileOn(!isProfileOn)}>
+              <img
+                className="w-10"
+                src="images/placeholder_avatar.png"
+                alt="profile picture"
+              />
+            </button>
+          </div>
+          {/* <div className="flex justify-end items-center gap-2 m-1">
             <DarkModeToggle />
             <div className="p-2 bg-foreground rounded text-font">
               {session?.user.email}
@@ -87,7 +111,7 @@ function App() {
             >
               Log Out
             </button>
-          </div>
+          </div> */}
           <StopwatchSystem session={session} />
         </>
       ) : (

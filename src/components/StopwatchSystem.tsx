@@ -196,7 +196,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
           {/* Stopwatches */}
           <h2 className="text-center text-4xl mb-2">My Stopwatches</h2>
           <button
-            className="bg-primary w-sm rounded mb-2 text-3xl py-5 tracking-widest border shadow-xl/20 transition hover:-translate-y-0.5"
+            className="bg-primary w-sm rounded mb-4 text-3xl py-5 tracking-widest border shadow-xl/20 transition hover:-translate-y-0.5"
             onClick={() => {
               setIsTimer(false);
               setIsDialogOpen(true);
@@ -235,7 +235,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
           <h2 className="text-center text-4xl mb-2">My Timers</h2>
 
           <button
-            className="bg-primary w-sm rounded mb-2 text-3xl py-5 tracking-widest border shadow-xl/20 transition hover:-translate-y-0.5"
+            className="bg-primary w-sm rounded mb-4 text-3xl py-5 tracking-widest border shadow-xl/20 transition hover:-translate-y-0.5"
             onClick={() => {
               setIsTimer(true);
               setIsDialogOpen(true);

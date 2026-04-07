@@ -43,7 +43,7 @@ export default function AddTimer({ session }: { session: Session }) {
           onInput={(e: any) => setTimerInput(e.target.value)}
           id="tname"
           name="tname"
-          className="w-sm py-5 text-3xl text-center text-wrap border-2 bg-foreground"
+          className="py-5 text-3xl text-center text-wrap border-2 bg-foreground"
         ></textarea>
         <div className="text-3xl">Settings</div>
         <div className="flex text-2xl">
@@ -110,7 +110,7 @@ export default function AddTimer({ session }: { session: Session }) {
           </select>
         </div>
         <button
-          className="bg-primary w-70 text-2xl border rounded py-2 mt-3 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
+          className="w-70 py-2 mt-3 mx-auto bg-primary text-2xl border rounded tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
           onClick={(e: any) => addTimer(e)}
         >
           Create Timer
