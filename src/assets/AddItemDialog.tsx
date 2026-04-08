@@ -1,4 +1,4 @@
-import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
+import { Dialog, DialogPanel } from "@headlessui/react";
 import type { Session } from "@supabase/supabase-js";
 
 // TEMPORARY FOR TESTING

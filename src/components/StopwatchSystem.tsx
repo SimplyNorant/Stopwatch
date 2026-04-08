@@ -53,7 +53,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
 
   // TIMER
   const [timerList, setTimerList] = useState<Task[]>([]);
-  const [endSound, setEndSound] = useState("timer_finish_ringing1.mp3");
+  const endSound = "timer_finish_ringing1.mp3";
 
   // const [editingTask, setEditingTask] = useState<EditableTask | null>(null);
 
