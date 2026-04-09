@@ -4,6 +4,7 @@ import { Auth } from "./components/Auth";
 import StopwatchSystem from "./components/StopwatchSystem";
 import supabase from "./supabase-client";
 import DarkModeToggle from "./assets/darkModeToggle";
+import ProfileButton from "./assets/ProfileButton";
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -91,27 +92,15 @@ function App() {
                 Log Out
               </button>
             </div>
-            <button onClick={() => setIsProfileOn(!isProfileOn)}>
+            {/* <button onClick={() => setIsProfileOn(!isProfileOn)}>
               <img
                 className="w-10"
                 src="images/placeholder_avatar.png"
                 alt="profile picture"
               />
-            </button>
+            </button> */}
+            <ProfileButton userName={session?.user.email} logout={logout} />
           </div>
-          {/* <div className="flex justify-end items-center gap-2 m-1">
-            <DarkModeToggle />
-            <div className="p-2 bg-foreground rounded text-font">
-              {session?.user.email}
-            </div>
-
-            <button
-              onClick={logout}
-              className="p-2 w sm:w-20 bg-gray-300 hover:bg-gray-400 transition rounded shadow-xl/5"
-            >
-              Log Out
-            </button>
-          </div> */}
           <StopwatchSystem session={session} />
         </>
       ) : (
