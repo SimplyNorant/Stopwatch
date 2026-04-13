@@ -20,11 +20,13 @@ import { CSS } from "@dnd-kit/utilities";
 import { RxDragHandleDots2 } from "react-icons/rx";
 // import { TiPencil } from "react-icons/ti";
 
-import supabase from "../supabase-client";
+// DATABASE
+import supabase from "../../supabase-client";
 import type { Session } from "@supabase/supabase-js";
-import { playSound } from "../actions";
-import StopwatchSkeletonList from "../assets/skeleton";
-import { Modal } from "../assets/AddItemDialog";
+
+import { playSound } from "../../actions";
+import StopwatchSkeletonList from "../../assets/skeleton";
+import { Modal } from "../../assets/AddItemDialog";
 
 interface Task {
   id: number;

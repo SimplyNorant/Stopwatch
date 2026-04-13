@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import supabase from "../supabase-client";
+import supabase from "../../supabase-client";
 import { z } from "zod";
 import Turnstile from "react-turnstile";
 
-import { Modal } from "../assets/dialog";
+import { Modal } from "../../assets/dialog";
 
 import { RiEyeCloseLine } from "react-icons/ri";
 import { RiEyeLine } from "react-icons/ri";

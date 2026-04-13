@@ -3,13 +3,15 @@ import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
 import App from "./App.tsx";
-import NotFoundPage from "./components/NotFoundPage.tsx";
-import PrivacyPolicy from "./components/PrivacyPolicy.tsx";
-import ResetPassword from "./components/ResetPassword.tsx";
-import ErrorPage from "./components/ErrorPage.tsx";
+import NotFoundPage from "./components/Pages/NotFoundPage.tsx";
+import PrivacyPolicy from "./components/Pages/PrivacyPolicy.tsx";
+import ResetPassword from "./components/Pages/ResetPassword.tsx";
+import ErrorPage from "./components/Pages/ErrorPage.tsx";
+import NoteSystem from "./components/Pages/NoteSystem.tsx";
 
 const router = createBrowserRouter([
   { path: "/", element: <App />, errorElement: <ErrorPage /> },
+  { path: "/notes", element: <NoteSystem /> },
   { path: "/PrivacyPolicy", element: <PrivacyPolicy /> },
   { path: "/reset-password", element: <ResetPassword /> },
   { path: "*", element: <NotFoundPage /> },
