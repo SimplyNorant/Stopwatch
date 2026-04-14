@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from "react";
+import { useSharedContext } from "../../assets/SharedContent";
 
 // DATABASE
 import supabase from "../../supabase-client";
-import type { Session } from "@supabase/supabase-js";
-import { li } from "motion/react-client";
 
 interface Note {
   id: number;
@@ -17,6 +16,8 @@ interface NoteProp extends Note {
 }
 
 export default function NoteSystem() {
+  const { session, logout } = useSharedContext();
+
   const [notes, setNotes] = useState<Note[]>([]);
 
   const [noteTitle, setNoteTitle] = useState<string>("");
@@ -29,6 +30,47 @@ export default function NoteSystem() {
 
     load();
   }, []);
+
+  useEffect(() => {
+    if (!session?.user) return;
+
+    const channel = supabase.channel("tasks-channel");
+    channel
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notes",
+          filter: `email=eq.${session.user.email}`,
+        },
+        (payload) => {
+          const newNote = payload.new as Note;
+
+          setNotes((prev) => [...prev, newNote]);
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "notes",
+          filter: `email=eq.${session.user.email}`,
+        },
+        (payload) => {
+          const oldNote = payload.old;
+
+          setNotes((prev) => prev.filter((el) => el.id !== oldNote.id));
+        },
+      )
+      .subscribe((status) => {
+        console.log("Subscription: ", status);
+      });
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session?.access_token]);
 
   const fetchTasks = async () => {
     const { data, error } = await supabase
@@ -80,15 +122,15 @@ export default function NoteSystem() {
         </div>
 
         <div className="mb-1 text-4xl">Notes</div>
-        <form className="flex items-start gap-2">
+        <form className="flex items-start gap-2 mb-3">
           <div className="flex flex-col">
             <label htmlFor="title">Title</label>
-            <input
-              type="text"
+            <textarea
+              value={noteTitle}
               onInput={(e: any) => setNoteTitle(e.target.value)}
-              className="border"
-              id="title"
-            />
+              id="description"
+              className="w-[20vw] text-3xl text-wrap border-2 bg-foreground overflow-hidden resize-none"
+            ></textarea>
           </div>
           <div className="flex flex-col">
             <label htmlFor="description">Description</label>
@@ -96,15 +138,15 @@ export default function NoteSystem() {
               value={noteDesc}
               onInput={(e: any) => setNoteDesc(e.target.value)}
               id="description"
-              className="text-3xl text-wrap border-2 bg-foreground"
+              className="w-[40vw] text-3xl text-wrap border-2 bg-foreground overflow-hidden resize-none"
             ></textarea>
           </div>
 
           <button
-            className="w-30 py-2 mt-3 self-end bg-blue-200 text-2xl border rounded shadow-xl/5 transition hover:-translate-y-0.5"
+            className="w-[20svw] h-19 py-2 mt-3 self-end bg-blue-200 text-2xl border rounded shadow-xl/5 transition hover:-translate-y-0.5"
             onClick={(e: any) => addNote(e)}
           >
-            Create Note
+            Create <br /> Note
           </button>
         </form>
         <ul className="list-disc pl-5">
@@ -127,12 +169,12 @@ export default function NoteSystem() {
 function Note({ id, title, description, onDelete }: NoteProp) {
   return (
     <>
-      <div>
+      <div className="flex gap-3 items-end">
         <span className="text-3xl font-semibold">{title}</span> -{" "}
         <span>{description}</span>
         <button
           onClick={() => onDelete(id)}
-          className="text-delete hover:text-red-800 transition "
+          className="text-delete hover:text-red-800 transition"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

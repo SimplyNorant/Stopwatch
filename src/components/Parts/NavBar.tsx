@@ -1,15 +1,17 @@
+import { useSharedContext } from "../../assets/SharedContent";
+
 import ProfileButton from "./ProfileButton";
 
-type Arguments = {
-  userName: string;
-  logout: Function;
-};
+export default function NavBar() {
+  const { session, logout } = useSharedContext();
 
-export default function NavBar({ userName, logout }: Arguments) {
+  const userName = session?.user.email || "guest";
+
   const adminAccess: boolean =
     userName === "mishanauki@gmail.com" || userName === "dobbyplay@outlook.com"
       ? true
       : false;
+
   return (
     <>
       <div className="flex justify-end items-center gap-5 m-3">

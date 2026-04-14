@@ -9,6 +9,8 @@ import ResetPassword from "./components/Pages/ResetPassword.tsx";
 import ErrorPage from "./components/Pages/ErrorPage.tsx";
 import NoteSystem from "./components/Pages/NoteSystem.tsx";
 
+import { SharedProvider } from "./assets/SharedContent.tsx";
+
 const router = createBrowserRouter([
   { path: "/", element: <App />, errorElement: <ErrorPage /> },
   { path: "/notes", element: <NoteSystem /> },
@@ -19,6 +21,8 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <SharedProvider>
+      <RouterProvider router={router} />
+    </SharedProvider>
   </StrictMode>,
 );
