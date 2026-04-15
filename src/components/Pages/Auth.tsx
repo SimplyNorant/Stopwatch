@@ -4,7 +4,7 @@ import supabase from "../../supabase-client";
 import { z } from "zod";
 import Turnstile from "react-turnstile";
 
-import { Modal } from "../../assets/dialog";
+import { Modal } from "../../assets/modals/EmailConfirmationModal";
 
 import { RiEyeCloseLine } from "react-icons/ri";
 import { RiEyeLine } from "react-icons/ri";

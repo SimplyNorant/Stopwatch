@@ -1,5 +1,5 @@
 import { useState } from "react";
-import supabase from "../supabase-client";
+import supabase from "../../supabase-client";
 import type { Session } from "@supabase/supabase-js";
 
 export default function AddStopwatch({ session }: { session: Session }) {

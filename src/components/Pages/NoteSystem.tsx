@@ -20,9 +20,6 @@ export default function NoteSystem() {
 
   const [notes, setNotes] = useState<Note[]>([]);
 
-  const [noteTitle, setNoteTitle] = useState<string>("");
-  const [noteDesc, setNoteDesc] = useState<string>("");
-
   useEffect(() => {
     const load = async () => {
       await fetchTasks();
@@ -86,23 +83,6 @@ export default function NoteSystem() {
     setNotes(data);
   };
 
-  const addNote = async (e: any) => {
-    e.preventDefault();
-    const { error } = await supabase
-      .from("notes")
-      .insert({
-        title: noteTitle,
-        description: noteDesc,
-        email: "dobbyplay@outlook.com", // TEMPORARY!!!
-      })
-      .single();
-
-    if (error) {
-      console.error("Whoops! Couldn't add it: ", error.message);
-      return;
-    }
-  };
-
   const deleteTask = async (id: number) => {
     setNotes((prev) => prev.filter((t) => t.id !== id));
 
@@ -122,33 +102,7 @@ export default function NoteSystem() {
         </div>
 
         <div className="mb-1 text-4xl">Notes</div>
-        <form className="flex items-start gap-2 mb-3">
-          <div className="flex flex-col">
-            <label htmlFor="title">Title</label>
-            <textarea
-              value={noteTitle}
-              onInput={(e: any) => setNoteTitle(e.target.value)}
-              id="description"
-              className="w-[20vw] text-3xl text-wrap border-2 bg-foreground overflow-hidden resize-none"
-            ></textarea>
-          </div>
-          <div className="flex flex-col">
-            <label htmlFor="description">Description</label>
-            <textarea
-              value={noteDesc}
-              onInput={(e: any) => setNoteDesc(e.target.value)}
-              id="description"
-              className="w-[40vw] text-3xl text-wrap border-2 bg-foreground overflow-hidden resize-none"
-            ></textarea>
-          </div>
 
-          <button
-            className="w-[20svw] h-19 py-2 mt-3 self-end bg-blue-200 text-2xl border rounded shadow-xl/5 transition hover:-translate-y-0.5"
-            onClick={(e: any) => addNote(e)}
-          >
-            Create <br /> Note
-          </button>
-        </form>
         <ul className="list-disc pl-5">
           {notes.map((el) => (
             <li key={el.id}>

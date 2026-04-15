@@ -26,7 +26,7 @@ import type { Session } from "@supabase/supabase-js";
 
 import { playSound } from "../../actions";
 import StopwatchSkeletonList from "../../assets/skeleton";
-import { Modal } from "../../assets/AddItemDialog";
+import { Modal } from "../../assets/modals/AddItemModal";
 
 interface Task {
   id: number;
