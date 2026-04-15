@@ -1,18 +1,16 @@
 import { Dialog, DialogPanel } from "@headlessui/react";
 import type { Session } from "@supabase/supabase-js";
 
-// TEMPORARY FOR TESTING
-import AddStopwatch from "./AddStopwatch";
-import AddTimer from "./AddTimer";
+import type React from "react";
 
 type ModalProps = {
   open: boolean;
   onClose: () => void;
   session: Session;
-  isTimer: boolean;
+  children: React.ReactNode;
 };
 
-export function Modal({ open, onClose, session, isTimer }: ModalProps) {
+export function Modal({ open, onClose, children }: ModalProps) {
   return (
     <Dialog open={open} onClose={onClose} className="relative z-50">
       {/* Backdrop */}
@@ -40,11 +38,7 @@ export function Modal({ open, onClose, session, isTimer }: ModalProps) {
               />
             </svg>
           </button>
-          {isTimer ? (
-            <AddTimer session={session} />
-          ) : (
-            <AddStopwatch session={session} />
-          )}
+          {children}
         </DialogPanel>
       </div>
     </Dialog>

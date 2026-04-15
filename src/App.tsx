@@ -1,15 +1,13 @@
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Auth } from "./components/Pages/Auth";
 import StopwatchSystem from "./components/Pages/StopwatchSystem";
-import supabase from "./supabase-client";
 import DarkModeToggle from "./assets/darkModeToggle";
 import NavBar from "./components/Parts/NavBar";
 
 import { useSharedContext } from "./assets/SharedContent";
 
 function App() {
-  const { session, logout } = useSharedContext();
+  const { session } = useSharedContext();
 
   return (
     <>

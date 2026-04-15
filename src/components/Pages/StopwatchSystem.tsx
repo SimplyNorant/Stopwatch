@@ -25,8 +25,11 @@ import supabase from "../../supabase-client";
 import type { Session } from "@supabase/supabase-js";
 
 import { playSound } from "../../actions";
-import StopwatchSkeletonList from "../../assets/skeleton";
 import { Modal } from "../../assets/modals/AddItemModal";
+
+import AddStopwatch from "../../assets/modals/AddStopwatch";
+import AddTimer from "../../assets/modals/AddTimer";
+import StopwatchSkeletonList from "../../assets/skeleton";
 
 interface Task {
   id: number;
@@ -191,8 +194,9 @@ export default function StopwatchSystem({ session }: { session: Session }) {
         open={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
         session={session}
-        isTimer={isTimer}
-      />
+      >
+        {isTimer ? <AddTimer /> : <AddStopwatch />}
+      </Modal>
       <div className="mt-2 flex flex-col lg:flex-row justify-around gap-10 lg:gap-0 text-font **:border-black">
         <div className="flex flex-col items-center">
           {/* Stopwatches */}

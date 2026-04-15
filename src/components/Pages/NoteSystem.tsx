@@ -1,8 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useSharedContext } from "../../assets/SharedContent";
 
 // DATABASE
 import supabase from "../../supabase-client";
+
+// MODAL
+import { Modal } from "../../assets/modals/AddItemModal";
+import AddNote from "../../assets/modals/AddNote";
 
 interface Note {
   id: number;
@@ -16,9 +20,11 @@ interface NoteProp extends Note {
 }
 
 export default function NoteSystem() {
-  const { session, logout } = useSharedContext();
+  const { session } = useSharedContext();
 
   const [notes, setNotes] = useState<Note[]>([]);
+
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const load = async () => {
@@ -96,13 +102,25 @@ export default function NoteSystem() {
 
   return (
     <>
-      <div className="ml-5 mt-3 text-2xl">
+      <Modal
+        open={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        session={session}
+      >
+        <AddNote />
+      </Modal>
+      <div className="mx-5 mt-3 text-2xl">
         <div className="absolute top-3 right-3 text-3xl mr-5">
           <a href="/">back</a>
         </div>
 
         <div className="mb-1 text-4xl">Notes</div>
-
+        <button
+          className="bg-primary rounded mb-4 text-3xl px-2 py-4 tracking-widest border shadow-xl/20 transition hover:-translate-y-0.5"
+          onClick={() => setIsDialogOpen(true)}
+        >
+          Add Note
+        </button>
         <ul className="list-disc pl-5">
           {notes.map((el) => (
             <li key={el.id}>
@@ -123,12 +141,16 @@ export default function NoteSystem() {
 function Note({ id, title, description, onDelete }: NoteProp) {
   return (
     <>
-      <div className="flex gap-3 items-end">
-        <span className="text-3xl font-semibold">{title}</span> -{" "}
-        <span>{description}</span>
+      <div className="relative flex gap-3 items-end">
+        <div className="w-full mr-6">
+          <div className="text-3xl font-semibold text-wrap wrap-anywhere">
+            {title}
+          </div>
+          <div className="text-wrap wrap-anywhere">{description}</div>
+        </div>
         <button
           onClick={() => onDelete(id)}
-          className="text-delete hover:text-red-800 transition"
+          className="absolute top-0 right-0 text-delete hover:text-red-800 transition"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

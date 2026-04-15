@@ -1,8 +1,11 @@
 import { useState } from "react";
 import supabase from "../../supabase-client";
-import type { Session } from "@supabase/supabase-js";
 
-export default function AddStopwatch({ session }: { session: Session }) {
+import { useSharedContext } from "../../assets/SharedContent";
+
+export default function AddStopwatch() {
+  const { session } = useSharedContext();
+
   const [stopwatchInput, setStopwatchInput] = useState<string>("");
 
   const addStopwatch = async (e: any) => {

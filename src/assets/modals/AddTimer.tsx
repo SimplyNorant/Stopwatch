@@ -1,8 +1,11 @@
 import { useState } from "react";
 import supabase from "../../supabase-client";
-import type { Session } from "@supabase/supabase-js";
 
-export default function AddTimer({ session }: { session: Session }) {
+import { useSharedContext } from "../../assets/SharedContent";
+
+export default function AddTimer() {
+  const { session } = useSharedContext();
+
   // TIMER
   const [timerInput, setTimerInput] = useState<string>("");
   const [timerDuration, setTimerDuration] = useState(0);
