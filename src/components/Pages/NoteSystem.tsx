@@ -7,6 +7,10 @@ import supabase from "../../supabase-client";
 // MODAL
 import { Modal } from "../../assets/modals/AddItemModal";
 import AddNote from "../../assets/modals/AddNote";
+import EditNote from "../../assets/modals/EditNote";
+
+// ICONS
+import { TiPencil } from "react-icons/ti";
 
 interface Note {
   id: number;
@@ -67,6 +71,24 @@ export default function NoteSystem() {
           setNotes((prev) => prev.filter((el) => el.id !== oldNote.id));
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "notes",
+          filter: `email=eq.${session.user.email}`,
+        },
+        (payload) => {
+          const updatedNote = payload.new as Note;
+
+          setNotes((prev) =>
+            prev.map((task) =>
+              task.id === updatedNote.id ? updatedNote : task,
+            ),
+          );
+        },
+      )
       .subscribe((status) => {
         console.log("Subscription: ", status);
       });
@@ -92,7 +114,6 @@ export default function NoteSystem() {
   const deleteTask = async (id: number) => {
     setNotes((prev) => prev.filter((t) => t.id !== id));
 
-    // Server delete
     const { error } = await supabase.from("notes").delete().eq("id", id);
 
     if (error) {
@@ -139,10 +160,21 @@ export default function NoteSystem() {
 }
 
 function Note({ id, title, description, onDelete }: NoteProp) {
+  const { session } = useSharedContext();
+
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+
   return (
     <>
+      <Modal
+        open={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        session={session}
+      >
+        <EditNote oldTitle={title} oldDescription={description} id={id} />
+      </Modal>
       <div className="relative flex gap-3 items-end">
-        <div className="w-full mr-6">
+        <div className="w-full mr-15">
           <div className="text-3xl font-semibold text-wrap wrap-anywhere">
             {title}
           </div>
@@ -166,6 +198,12 @@ function Note({ id, title, description, onDelete }: NoteProp) {
               d="M6 18 18 6M6 6l12 12"
             />
           </svg>
+        </button>
+        <button
+          onClick={() => setIsDialogOpen(true)}
+          className="absolute top-1 right-10 text-amber-600 hover:text-amber-800 transition"
+        >
+          <TiPencil size={25} />
         </button>
       </div>
     </>
