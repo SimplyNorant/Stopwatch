@@ -1,3 +1,13 @@
+// Это специальный маркер для Workbox. Он будет заменён при сборке на список файлов для предварительного кэширования.
+importScripts(
+  "https://storage.googleapis.com/workbox-cdn/releases/6.6.0/workbox-sw.js",
+);
+
+// Говорим Workbox использовать список ресурсов, который вставит плагин при сборке
+if (typeof self !== "undefined" && self.workbox) {
+  self.workbox.precaching.precacheAndRoute(self.__WB_MANIFEST || []);
+}
+
 self.addEventListener("install", (event) => {
   console.log("SW installed");
   self.skipWaiting();

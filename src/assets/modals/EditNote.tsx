@@ -1,8 +1,6 @@
 import { useState } from "react";
 import supabase from "../../supabase-client";
 
-import { useSharedContext } from "../SharedContent";
-
 interface EditProps {
   oldTitle: string;
   oldDescription: string;
@@ -10,8 +8,6 @@ interface EditProps {
 }
 
 export default function EditNote({ oldTitle, oldDescription, id }: EditProps) {
-  const { session } = useSharedContext();
-
   const [noteTitle, setNoteTitle] = useState<string>(oldTitle);
   const [noteDesc, setNoteDesc] = useState<string>(oldDescription);
 
