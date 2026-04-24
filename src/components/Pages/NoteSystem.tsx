@@ -6,8 +6,7 @@ import supabase from "../../supabase-client";
 
 // MODAL
 import { Modal } from "../../assets/modals/AddItemModal";
-import AddNote from "../../assets/modals/AddNote";
-import EditNote from "../../assets/modals/EditNote";
+import NoteModal from "../../assets/modals/NoteActions";
 
 // ICONS
 import { TiPencil } from "react-icons/ti";
@@ -128,7 +127,7 @@ export default function NoteSystem() {
         onClose={() => setIsDialogOpen(false)}
         session={session}
       >
-        <AddNote />
+        <NoteModal isAdding={true} />
       </Modal>
       <div className="mx-5 mt-3 text-2xl">
         <div className="absolute top-3 right-3 text-3xl mr-5">
@@ -171,7 +170,12 @@ function Note({ id, title, description, onDelete }: NoteProp) {
         onClose={() => setIsDialogOpen(false)}
         session={session}
       >
-        <EditNote oldTitle={title} oldDescription={description} id={id} />
+        <NoteModal
+          oldTitle={title}
+          oldDescription={description}
+          isAdding={false}
+          id={id}
+        />
       </Modal>
       <div className="relative flex gap-3 items-end">
         <div className="w-full mr-15">

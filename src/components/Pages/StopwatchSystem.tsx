@@ -1,4 +1,7 @@
+// HOOKS
 import { useState, useEffect, useRef } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { useMergeRefs } from "../../assets/hooks/useMergeRefs";
 import {
   closestCorners,
   DndContext,
@@ -18,7 +21,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 import { RxDragHandleDots2 } from "react-icons/rx";
-// import { TiPencil } from "react-icons/ti";
+import { TiPencil } from "react-icons/ti";
 
 // DATABASE
 import supabase from "../../supabase-client";
@@ -601,15 +604,37 @@ function TimeTask({
       .padStart(2, "0")}`;
   };
 
+  // HOTKEYS
+  const HotkeySwitchRef = useHotkeys<HTMLParagraphElement>("s", (e) => {
+    e.preventDefault();
+    if (e.repeat) return;
+    isRunning ? stop() : start();
+  });
+
+  const HotkeyResetRef = useHotkeys<HTMLParagraphElement>("r", (e) => {
+    e.preventDefault();
+    if (e.repeat) return;
+    reset();
+  });
+
+  // Reset all stopwatches
+  useHotkeys<HTMLParagraphElement>("ctrl + r", (e) => {
+    e.preventDefault();
+    if (e.repeat) return;
+    if (duration === 0) reset();
+  });
+
+  const mergedRef = useMergeRefs(setNodeRef, HotkeySwitchRef, HotkeyResetRef);
+
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={mergedRef} style={style}>
       <div className="flex relative">
         <div className="text-3xl text-center mb-1 text-wrap wrap-anywhere w-80">
           {title}
         </div>
         <div className="absolute right-0 z-1">
           <div className="flex">
-            {/* <button
+            <button
               onClick={() => {
                 stop();
                 // onEdit({ id, title, duration, time });
@@ -617,7 +642,7 @@ function TimeTask({
               className="text-amber-600 hover:text-amber-800 transition"
             >
               <TiPencil size={25} />
-            </button> */}
+            </button>
             <button
               onClick={() => onDelete(duration, id)}
               className="text-delete hover:text-red-800 transition "
