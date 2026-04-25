@@ -2,7 +2,6 @@ import { useState } from "react";
 import supabase from "../../supabase-client";
 
 import { useSharedContext } from "../SharedContent";
-import { p } from "motion/react-client";
 
 interface EditProps {
   oldTitle?: string;

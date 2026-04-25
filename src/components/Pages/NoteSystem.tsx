@@ -122,11 +122,7 @@ export default function NoteSystem() {
 
   return (
     <>
-      <Modal
-        open={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        session={session}
-      >
+      <Modal open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
         <NoteModal isAdding={true} />
       </Modal>
       <div className="mx-5 mt-3 text-2xl">
@@ -159,17 +155,11 @@ export default function NoteSystem() {
 }
 
 function Note({ id, title, description, onDelete }: NoteProp) {
-  const { session } = useSharedContext();
-
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
   return (
     <>
-      <Modal
-        open={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        session={session}
-      >
+      <Modal open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
         <NoteModal
           oldTitle={title}
           oldDescription={description}

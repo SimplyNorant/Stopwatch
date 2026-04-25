@@ -1,12 +1,10 @@
 import { Dialog, DialogPanel } from "@headlessui/react";
-import type { Session } from "@supabase/supabase-js";
 
 import type React from "react";
 
 type ModalProps = {
   open: boolean;
   onClose: () => void;
-  session: Session;
   children: React.ReactNode;
 };
 

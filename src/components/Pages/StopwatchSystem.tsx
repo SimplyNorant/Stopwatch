@@ -30,7 +30,8 @@ import type { Session } from "@supabase/supabase-js";
 import { playSound } from "../../actions";
 import { Modal } from "../../assets/modals/AddItemModal";
 
-import AddStopwatch from "../../assets/modals/AddStopwatch";
+import { AddStopwatch } from "../../assets/modals/TimeTaskActions";
+// import AddStopwatch from "../../assets/modals/AddStopwatch";
 import AddTimer from "../../assets/modals/AddTimer";
 import StopwatchSkeletonList from "../../assets/skeleton";
 
@@ -41,6 +42,7 @@ interface Task {
   created_at: string;
   duration: number;
   position: number;
+  time?: number;
 }
 
 // interface EditableTask {
@@ -109,6 +111,32 @@ export default function StopwatchSystem({ session }: { session: Session }) {
 
           setStopwatchList((prev) => prev.filter((el) => el.id !== oldTask.id));
           setTimerList((prev) => prev.filter((el) => el.id !== oldTask.id));
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "tasks",
+          filter: `email=eq.${session.user.email}`,
+        },
+        (payload) => {
+          const updatedNote = payload.new as Task;
+
+          if (updatedNote.duration === 0) {
+            setStopwatchList((prev) =>
+              prev.map((task) =>
+                task.id === updatedNote.id ? updatedNote : task,
+              ),
+            );
+          } else {
+            setTimerList((prev) =>
+              prev.map((task) =>
+                task.id === updatedNote.id ? updatedNote : task,
+              ),
+            );
+          }
         },
       )
       .subscribe((status) => {
@@ -193,12 +221,8 @@ export default function StopwatchSystem({ session }: { session: Session }) {
 
   return (
     <>
-      <Modal
-        open={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        session={session}
-      >
-        {isTimer ? <AddTimer /> : <AddStopwatch />}
+      <Modal open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
+        {isTimer ? <AddTimer /> : <AddStopwatch isAdding={true} />}
       </Modal>
       <div className="mt-2 flex flex-col lg:flex-row justify-around gap-10 lg:gap-0 text-font **:border-black">
         <div className="flex flex-col items-center">
@@ -281,25 +305,6 @@ export default function StopwatchSystem({ session }: { session: Session }) {
           </DndContext>
         </div>
       </div>
-      {/* {editingTask && (
-        <EditTaskModal
-          task={editingTask}
-          onClose={() => setEditingTask(null)}
-          onSave={async (updated) => {
-            await supabase
-              .from("tasks")
-              .update({
-                title: updated.title,
-                duration: updated.duration,
-                time: updated.time,
-              })
-              .eq("id", updated.id);
-
-            setEditingTask(null);
-            fetchTasks(); // or optimistic update
-          }}
-        />
-      )} */}
     </>
   );
 }
@@ -308,16 +313,18 @@ function TimeTask({
   task,
   soundEndName,
   onDelete,
-  // onEdit,
 }: {
   task: Task;
   soundEndName?: string;
   onDelete: Function;
-  // onEdit: (task: EditableTask) => void;
 }) {
-  const { id, title, duration } = task;
+  const { id, title, duration, time = 0 } = task;
 
-  const [time, setTime] = useState(0);
+  // Modal
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+
+  // Time variables
+  const [currentTime, setCurrentTime] = useState(time);
   const [isRunning, setIsRunning] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [, forceRender] = useState(0);
@@ -330,7 +337,7 @@ function TimeTask({
   let displayTime = 0;
 
   if (isRunning && startTimeRef.current) {
-    const elapsed = time + (Date.now() - startTimeRef.current);
+    const elapsed = currentTime + (Date.now() - startTimeRef.current);
 
     if (duration && elapsed >= duration) {
       displayTime = elapsed - duration; // Overtime
@@ -338,7 +345,7 @@ function TimeTask({
       displayTime = elapsed;
     }
   } else {
-    displayTime = time;
+    displayTime = currentTime;
   }
 
   const soundEnd = playSound(`audio/${soundEndName}`, 0.3);
@@ -424,7 +431,7 @@ function TimeTask({
         return;
       }
 
-      setTime(data.time);
+      setCurrentTime(data.time);
       if (data.started_at) {
         startTimeRef.current = new Date(data.started_at).getTime();
         setIsRunning(true);
@@ -524,7 +531,7 @@ function TimeTask({
     const now = Date.now();
 
     startTimeRef.current = now;
-    endTimeRef.current = duration ? now + (duration - time) : null;
+    endTimeRef.current = duration ? now + (duration - currentTime) : null;
 
     setIsRunning(true);
 
@@ -537,12 +544,12 @@ function TimeTask({
   const stop = async () => {
     if (!startTimeRef.current) return;
 
-    const elapsed = time + (Date.now() - startTimeRef.current);
+    const elapsed = currentTime + (Date.now() - startTimeRef.current);
 
     startTimeRef.current = null;
     endTimeRef.current = null;
 
-    setTime(elapsed);
+    setCurrentTime(elapsed);
     setIsRunning(false);
 
     await supabase
@@ -566,7 +573,7 @@ function TimeTask({
     }
     startTimeRef.current = null;
     setIsRunning(false);
-    setTime(0);
+    setCurrentTime(0);
 
     soundEnd.stop();
     document.title = "Stopwatches"; // Possible to use a variable for this, in case I'd want to change the website's name
@@ -627,134 +634,97 @@ function TimeTask({
   const mergedRef = useMergeRefs(setNodeRef, HotkeySwitchRef, HotkeyResetRef);
 
   return (
-    <div ref={mergedRef} style={style}>
-      <div className="flex relative">
-        <div className="text-3xl text-center mb-1 text-wrap wrap-anywhere w-80">
-          {title}
-        </div>
-        <div className="absolute right-0 z-1">
-          <div className="flex">
-            <button
-              onClick={() => {
-                stop();
-                // onEdit({ id, title, duration, time });
-              }}
-              className="text-amber-600 hover:text-amber-800 transition"
-            >
-              <TiPencil size={25} />
-            </button>
-            <button
-              onClick={() => onDelete(duration, id)}
-              className="text-delete hover:text-red-800 transition "
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth="1.5"
-                stroke="currentColor"
-                className="size-8"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18 18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
+    <>
+      <Modal open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
+        {duration > 0 ? (
+          <AddTimer />
+        ) : (
+          <AddStopwatch
+            isAdding={false}
+            oldTitle={title}
+            oldTime={currentTime}
+            id={id}
+          />
+        )}
+      </Modal>
+      <div ref={mergedRef} style={style}>
+        <div className="flex relative">
+          <div className="text-3xl text-center mb-1 text-wrap wrap-anywhere w-80">
+            {title}
           </div>
-        </div>
-      </div>
-
-      <div className="relative bg-foreground text-center mb-2 text-3xl py-5 px-4 border rounded tracking-widest shadow-xl/10">
-        {isFinished ? (
-          <div className="text-delete">
-            Time! ({formatTime(0).slice(0, formatTime(0).length - 3)})
-            <div className="absolute bottom-0.5 left-15 text-sm">
-              Overtime: +{formatTime(displayTime)}
+          <div className="absolute right-0 z-1">
+            <div className="flex">
+              <button
+                onClick={() => {
+                  setIsDialogOpen(true);
+                }}
+                className="text-amber-600 hover:text-amber-800 transition"
+              >
+                <TiPencil size={25} />
+              </button>
+              <button
+                onClick={() => onDelete(duration, id)}
+                className="text-delete hover:text-red-800 transition "
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.5"
+                  stroke="currentColor"
+                  className="size-8"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18 18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
             </div>
           </div>
-        ) : (
-          <div>{formatTime(displayTime)}</div>
-        )}
+        </div>
 
-        {/* Handle for dragging */}
-        <div
-          {...listeners}
-          {...attributes}
-          className="absolute top-6 -left-7 cursor-grab active:cursor-grabbing touch-none"
-        >
-          <RxDragHandleDots2 size={25} />
+        <div className="relative bg-foreground text-center mb-2 text-3xl py-5 px-4 border rounded tracking-widest shadow-xl/10">
+          {isFinished ? (
+            <div className="text-delete">
+              Time! ({formatTime(0).slice(0, formatTime(0).length - 3)})
+              <div className="absolute bottom-0.5 left-15 text-sm">
+                Overtime: +{formatTime(displayTime)}
+              </div>
+            </div>
+          ) : (
+            <div>{formatTime(displayTime)}</div>
+          )}
+
+          {/* Handle for dragging */}
+          <div
+            {...listeners}
+            {...attributes}
+            className="absolute top-6 -left-7 cursor-grab active:cursor-grabbing touch-none"
+          >
+            <RxDragHandleDots2 size={25} />
+          </div>
+        </div>
+        <div className="relative flex justify-between gap-3 text-3xl">
+          <button
+            onClick={startStop}
+            className={
+              isRunning
+                ? "bg-delete w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
+                : "bg-primary w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
+            }
+          >
+            {isRunning ? "Stop" : "Start"}
+          </button>
+          <button
+            onClick={reset}
+            className="bg-secondary w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
+          >
+            Reset
+          </button>
         </div>
       </div>
-      <div className="relative flex justify-between gap-3 text-3xl">
-        <button
-          onClick={startStop}
-          className={
-            isRunning
-              ? "bg-delete w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
-              : "bg-primary w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
-          }
-        >
-          {isRunning ? "Stop" : "Start"}
-        </button>
-        <button
-          onClick={reset}
-          className="bg-secondary w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
-        >
-          Reset
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
-
-// function EditTaskModal({
-//   task,
-//   onClose,
-//   onSave,
-// }: {
-//   task: EditableTask;
-//   onClose: () => void;
-//   onSave: (updated: EditableTask) => void;
-// }) {
-//   const [title, setTitle] = useState(task.title);
-//   const [duration, setDuration] = useState(task.duration);
-//   const [time, setTime] = useState(task.time);
-
-//   return (
-//     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-//       <div className="bg-background p-6 rounded shadow-xl w-96">
-//         <h2 className="text-2xl mb-4">Edit task</h2>
-
-//         <label>Name</label>
-//         <input
-//           value={title}
-//           onChange={(e) => setTitle(e.target.value)}
-//           className="w-full border p-2 mb-4"
-//         />
-//         <input
-//           value={duration}
-//           onChange={(e: any) => setDuration(e.target.value)}
-//           className="w-full border p-2 mb-4"
-//         />
-//         <input
-//           value={time}
-//           onChange={(e: any) => setTime(e.target.value)}
-//           className="w-full border p-2 mb-4"
-//         />
-//         {/* Time inputs here */}
-
-//         <div className="flex justify-end gap-2">
-//           <button onClick={onClose}>Cancel</button>
-//           <button
-//             onClick={() => onSave({ ...task, title, duration, time })}
-//             className="bg-primary px-4 py-2 rounded"
-//           >
-//             Save
-//           </button>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
