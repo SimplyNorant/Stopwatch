@@ -324,7 +324,8 @@ function TimeTask({
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
   // Time variables
-  const [currentTime, setCurrentTime] = useState(time);
+  const currentTimeRef = useRef<number>(time);
+
   const [isRunning, setIsRunning] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [, forceRender] = useState(0);
@@ -337,7 +338,8 @@ function TimeTask({
   let displayTime = 0;
 
   if (isRunning && startTimeRef.current) {
-    const elapsed = currentTime + (Date.now() - startTimeRef.current);
+    const elapsed =
+      currentTimeRef.current + (Date.now() - startTimeRef.current);
 
     if (duration && elapsed >= duration) {
       displayTime = elapsed - duration; // Overtime
@@ -345,7 +347,7 @@ function TimeTask({
       displayTime = elapsed;
     }
   } else {
-    displayTime = currentTime;
+    displayTime = currentTimeRef.current;
   }
 
   const soundEnd = playSound(`audio/${soundEndName}`, 0.3);
@@ -431,7 +433,8 @@ function TimeTask({
         return;
       }
 
-      setCurrentTime(data.time);
+      currentTimeRef.current = data.time;
+
       if (data.started_at) {
         startTimeRef.current = new Date(data.started_at).getTime();
         setIsRunning(true);
@@ -531,7 +534,9 @@ function TimeTask({
     const now = Date.now();
 
     startTimeRef.current = now;
-    endTimeRef.current = duration ? now + (duration - currentTime) : null;
+    endTimeRef.current = duration
+      ? now + (duration - currentTimeRef.current)
+      : null;
 
     setIsRunning(true);
 
@@ -544,12 +549,13 @@ function TimeTask({
   const stop = async () => {
     if (!startTimeRef.current) return;
 
-    const elapsed = currentTime + (Date.now() - startTimeRef.current);
+    const elapsed =
+      currentTimeRef.current + (Date.now() - startTimeRef.current);
 
     startTimeRef.current = null;
     endTimeRef.current = null;
 
-    setCurrentTime(elapsed);
+    currentTimeRef.current = elapsed;
     setIsRunning(false);
 
     await supabase
@@ -567,13 +573,15 @@ function TimeTask({
   };
 
   const reset = async () => {
+    currentTimeRef.current = 0;
+
     if (rafRef.current !== null) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
+
     startTimeRef.current = null;
     setIsRunning(false);
-    setCurrentTime(0);
 
     soundEnd.stop();
     document.title = "Stopwatches"; // Possible to use a variable for this, in case I'd want to change the website's name
@@ -642,7 +650,7 @@ function TimeTask({
           <AddStopwatch
             isAdding={false}
             oldTitle={title}
-            oldTime={currentTime}
+            oldTime={currentTimeRef.current}
             id={id}
           />
         )}
