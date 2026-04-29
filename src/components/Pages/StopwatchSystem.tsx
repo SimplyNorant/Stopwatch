@@ -1,6 +1,7 @@
 // HOOKS
 import { useState, useEffect, useRef } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import * as motion from "motion/react-client";
 import { useMergeRefs } from "../../assets/hooks/useMergeRefs";
 import {
   closestCorners,
@@ -34,6 +35,8 @@ import { AddStopwatch } from "../../assets/modals/TimeTaskActions";
 // import AddStopwatch from "../../assets/modals/AddStopwatch";
 import AddTimer from "../../assets/modals/AddTimer";
 import StopwatchSkeletonList from "../../assets/skeleton";
+
+import { AnimatePresence } from "motion/react";
 
 interface Task {
   id: number;
@@ -218,7 +221,6 @@ export default function StopwatchSystem({ session }: { session: Session }) {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
-
   return (
     <>
       <Modal open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
@@ -242,23 +244,25 @@ export default function StopwatchSystem({ session }: { session: Session }) {
             onDragEnd={(e) => handleDragEnd(e, true)}
             collisionDetection={closestCorners}
           >
-            <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center">
               <SortableContext
                 items={stopwatchList}
                 strategy={verticalListSortingStrategy}
               >
-                {loading ? (
-                  <StopwatchSkeletonList count={3} />
-                ) : (
-                  stopwatchList.map((el) => (
-                    <TimeTask
-                      key={el.id}
-                      task={el}
-                      onDelete={deleteTask}
-                      // onEdit={() => setEditingTask(el)}
-                    />
-                  ))
-                )}
+                <AnimatePresence>
+                  {loading ? (
+                    <StopwatchSkeletonList count={3} />
+                  ) : (
+                    stopwatchList.map((el) => (
+                      <TimeTask
+                        key={el.id}
+                        task={el}
+                        onDelete={deleteTask}
+                        // onEdit={() => setEditingTask(el)}
+                      />
+                    ))
+                  )}
+                </AnimatePresence>
               </SortableContext>
             </div>
           </DndContext>
@@ -282,24 +286,26 @@ export default function StopwatchSystem({ session }: { session: Session }) {
             onDragEnd={(e) => handleDragEnd(e, false)}
             collisionDetection={closestCorners}
           >
-            <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center">
               <SortableContext
                 items={timerList}
                 strategy={verticalListSortingStrategy}
               >
-                {loading ? (
-                  <StopwatchSkeletonList count={3} />
-                ) : (
-                  timerList.map((el) => (
-                    <TimeTask
-                      key={el.id}
-                      task={el}
-                      soundEndName={endSound}
-                      onDelete={deleteTask}
-                      // onEdit={() => setEditingTask(el)}
-                    />
-                  ))
-                )}
+                <AnimatePresence>
+                  {loading ? (
+                    <StopwatchSkeletonList count={3} />
+                  ) : (
+                    timerList.map((el) => (
+                      <TimeTask
+                        key={el.id}
+                        task={el}
+                        soundEndName={endSound}
+                        onDelete={deleteTask}
+                        // onEdit={() => setEditingTask(el)}
+                      />
+                    ))
+                  )}
+                </AnimatePresence>
               </SortableContext>
             </div>
           </DndContext>
@@ -640,7 +646,6 @@ function TimeTask({
   });
 
   const mergedRef = useMergeRefs(setNodeRef, HotkeySwitchRef, HotkeyResetRef);
-
   return (
     <>
       <Modal open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
@@ -656,82 +661,104 @@ function TimeTask({
         )}
       </Modal>
       <div ref={mergedRef} style={style}>
-        <div className="flex relative">
-          <div className="text-3xl text-center mb-1 text-wrap wrap-anywhere w-80">
-            {title}
-          </div>
-          <div className="absolute right-0 z-1">
-            <div className="flex">
-              <button
-                onClick={() => {
-                  setIsDialogOpen(true);
-                }}
-                className="text-amber-600 hover:text-amber-800 transition"
-              >
-                <TiPencil size={25} />
-              </button>
-              <button
-                onClick={() => onDelete(duration, id)}
-                className="text-delete hover:text-red-800 transition "
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth="1.5"
-                  stroke="currentColor"
-                  className="size-8"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 18 18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+        <motion.div
+          initial={{ opacity: 0.9, scale: 0.9, marginBottom: 16 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{
+            opacity: 0,
+            scale: 0,
+            height: 0,
+            marginTop: 0,
+            marginBottom: 0,
+            paddingTop: 0,
+            paddingBottom: 0,
+          }}
+          transition={{
+            duration: 0.3,
+            scale: { type: "spring", visualDuration: 0.3, bounce: 0.5 },
+            height: { duration: 0.3 },
+            marginBottom: { duration: 0.3 },
+            paddingTop: { duration: 0.3 },
+            paddingBottom: { duration: 0.3 },
+          }}
+        >
+          <div className="flex relative">
+            <div className="text-3xl text-center mb-1 text-wrap wrap-anywhere w-80">
+              {title}
             </div>
-          </div>
-        </div>
-
-        <div className="relative bg-foreground text-center mb-2 text-3xl py-5 px-4 border rounded tracking-widest shadow-xl/10">
-          {isFinished ? (
-            <div className="text-delete">
-              Time! ({formatTime(0).slice(0, formatTime(0).length - 3)})
-              <div className="absolute bottom-0.5 left-15 text-sm">
-                Overtime: +{formatTime(displayTime)}
+            <div className="absolute right-0 z-1">
+              <div className="flex">
+                <button
+                  onClick={() => {
+                    setIsDialogOpen(true);
+                  }}
+                  className="text-amber-600 hover:text-amber-800 transition"
+                >
+                  <TiPencil size={25} />
+                </button>
+                <button
+                  onClick={() => onDelete(duration, id)}
+                  className="text-delete hover:text-red-800 transition "
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth="1.5"
+                    stroke="currentColor"
+                    className="size-8"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18 18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
               </div>
             </div>
-          ) : (
-            <div>{formatTime(displayTime)}</div>
-          )}
-
-          {/* Handle for dragging */}
-          <div
-            {...listeners}
-            {...attributes}
-            className="absolute top-6 -left-7 cursor-grab active:cursor-grabbing touch-none"
-          >
-            <RxDragHandleDots2 size={25} />
           </div>
-        </div>
-        <div className="relative flex justify-between gap-3 text-3xl">
-          <button
-            onClick={startStop}
-            className={
-              isRunning
-                ? "bg-delete w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
-                : "bg-primary w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
-            }
-          >
-            {isRunning ? "Stop" : "Start"}
-          </button>
-          <button
-            onClick={reset}
-            className="bg-secondary w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
-          >
-            Reset
-          </button>
-        </div>
+
+          <div className="relative bg-foreground text-center mb-2 text-3xl py-5 px-4 border rounded tracking-widest shadow-xl/10">
+            {isFinished ? (
+              <div className="text-delete">
+                Time! ({formatTime(0).slice(0, formatTime(0).length - 3)})
+                <div className="absolute bottom-0.5 left-15 text-sm">
+                  Overtime: +{formatTime(displayTime)}
+                </div>
+              </div>
+            ) : (
+              <div>{formatTime(displayTime)}</div>
+            )}
+
+            {/* Handle for dragging */}
+            <div
+              {...listeners}
+              {...attributes}
+              className="absolute top-6 -left-7 cursor-grab active:cursor-grabbing touch-none"
+            >
+              <RxDragHandleDots2 size={25} />
+            </div>
+          </div>
+          <div className="relative flex justify-between gap-3 text-3xl">
+            <button
+              onClick={startStop}
+              className={
+                isRunning
+                  ? "bg-delete w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
+                  : "bg-primary w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
+              }
+            >
+              {isRunning ? "Stop" : "Start"}
+            </button>
+            <button
+              onClick={reset}
+              className="bg-secondary w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
+            >
+              Reset
+            </button>
+          </div>
+        </motion.div>
       </div>
     </>
   );
