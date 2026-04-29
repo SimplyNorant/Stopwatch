@@ -580,6 +580,7 @@ function TimeTask({
 
   const reset = async () => {
     currentTimeRef.current = 0;
+    forceRender((t) => t + 1);
 
     if (rafRef.current !== null) {
       cancelAnimationFrame(rafRef.current);
@@ -629,6 +630,7 @@ function TimeTask({
   const HotkeySwitchRef = useHotkeys<HTMLParagraphElement>("s", (e) => {
     e.preventDefault();
     if (e.repeat) return;
+    if (isFinished) restart();
     isRunning ? stop() : start();
   });
 
