@@ -5,13 +5,14 @@ import DarkModeToggle from "./assets/darkModeToggle";
 import NavBar from "./components/Parts/NavBar";
 
 import { useSharedContext } from "./assets/SharedContent";
+import StopwatchSystemLocal from "./components/Pages/StopwatchSystemLocal";
 
 function App() {
   const { session } = useSharedContext();
 
   return (
     <>
-      {session ? (
+      {/* {session ? (
         <>
           <NavBar />
           <StopwatchSystem session={session} />
@@ -28,7 +29,8 @@ function App() {
       )}
       <div className="text-center text-font mt-[60vh] mb-5 hover:text-gray-400 transition">
         <Link to={"/PrivacyPolicy"}>Privacy Policy</Link>
-      </div>
+      </div> */}
+      <StopwatchSystemLocal />
     </>
   );
 }

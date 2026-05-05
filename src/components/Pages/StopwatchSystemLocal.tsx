@@ -1,8 +1,74 @@
-// HOOKS
-import { useState, useEffect, useRef } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
-import * as motion from "motion/react-client";
-import { useMergeRefs } from "../../assets/hooks/useMergeRefs";
+// ============================================================
+// localStorage helpers – all synchronous
+// ============================================================
+
+interface LocalTask {
+  id: number;
+  title: string;
+  description: string;
+  created_at: string;
+  duration: number;
+  position: number;
+  time: number; // elapsed ms
+  started_at: string | null; // ISO string or null
+}
+
+const STORAGE_KEY = "guest_stopwatch_tasks";
+
+function getAllLocal(): LocalTask[] {
+  const data = localStorage.getItem(STORAGE_KEY);
+  return data ? JSON.parse(data) : [];
+}
+
+function saveAllLocal(tasks: LocalTask[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
+
+function addLocalTask(partial: Omit<LocalTask, "id" | "position">): LocalTask {
+  const tasks = getAllLocal();
+  const maxPos = tasks.reduce((max, t) => Math.max(max, t.position), -1);
+  const newTask: LocalTask = {
+    ...partial,
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    position: maxPos + 1,
+    time: partial.time ?? 0,
+    started_at: partial.started_at ?? null,
+    description: partial.description ?? "",
+  };
+  saveAllLocal([...tasks, newTask]);
+  return newTask;
+}
+
+function updateLocalTask(id: number, changes: Partial<LocalTask>): void {
+  const tasks = getAllLocal();
+  const index = tasks.findIndex((t) => t.id === id);
+  if (index !== -1) {
+    tasks[index] = { ...tasks[index], ...changes };
+    saveAllLocal(tasks);
+  }
+}
+
+function deleteLocalTask(id: number): void {
+  const tasks = getAllLocal().filter((t) => t.id !== id);
+  saveAllLocal(tasks);
+}
+
+function swapLocalPositions(id1: number, id2: number): void {
+  const tasks = getAllLocal();
+  const t1 = tasks.find((t) => t.id === id1);
+  const t2 = tasks.find((t) => t.id === id2);
+  if (t1 && t2) {
+    const temp = t1.position;
+    t1.position = t2.position;
+    t2.position = temp;
+    saveAllLocal(tasks);
+  }
+}
+
+// ============================================================
+// Imports
+// ============================================================
+
 import {
   closestCorners,
   DndContext,
@@ -20,22 +86,23 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-
+import { AnimatePresence, motion } from "motion/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import { RxDragHandleDots2 } from "react-icons/rx";
 import { TiPencil } from "react-icons/ti";
-
-// DATABASE
-import supabase from "../../supabase-client";
-import type { Session } from "@supabase/supabase-js";
-
 import { playSound } from "../../actions";
 import { Modal } from "../../assets/modals/AddItemModal";
-
-import { AddStopwatch } from "../../assets/modals/TimeTaskActions";
-import { AddTimer } from "../../assets/modals/TimeTaskActions";
+import {
+  AddStopwatch,
+  AddTimer,
+} from "../../assets/modals/TimeTaskActionsLocal";
 import StopwatchSkeletonList from "../../assets/skeleton";
+import { useMergeRefs } from "../../assets/hooks/useMergeRefs";
 
-import { AnimatePresence } from "motion/react";
+// ============================================================
+// Task interface (for UI state)
+// ============================================================
 
 interface Task {
   id: number;
@@ -44,167 +111,122 @@ interface Task {
   created_at: string;
   duration: number;
   position: number;
-  time: number;
-  started_at: string | null;
+  time?: number;
+  started_at?: string | null;
 }
 
-export default function StopwatchSystem({ session }: { session: Session }) {
-  const [loading, setLoading] = useState(true);
-  // STOPWATCH
-  const [stopwatchList, setStopwatchList] = useState<Task[]>([]);
+// ============================================================
+// Main component
+// ============================================================
 
-  // MODAL
+export default function StopwatchSystemLocal() {
+  const [loading, setLoading] = useState(true);
+  const [stopwatchList, setStopwatchList] = useState<Task[]>([]);
+  const [timerList, setTimerList] = useState<Task[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isTimer, setIsTimer] = useState(false);
-
-  // TIMER
-  const [timerList, setTimerList] = useState<Task[]>([]);
   const endSound = "timer_finish_ringing1.mp3";
 
-  useEffect(() => {
-    const load = async () => {
-      await fetchTasks();
-      setLoading(false);
-    };
+  // -----------------------------------------------
+  // Persistence callbacks (synchronous)
+  // -----------------------------------------------
 
-    load();
+  const loadTimeForTask = useCallback(
+    (id: number): { time: number; started_at: string | null } => {
+      const tasks = getAllLocal();
+      const t = tasks.find((x) => x.id === id);
+      return { time: t?.time ?? 0, started_at: t?.started_at ?? null };
+    },
+    [],
+  );
+
+  const onStart = useCallback((id: number, startedAtISO: string) => {
+    updateLocalTask(id, { started_at: startedAtISO });
+  }, []);
+
+  const onStop = useCallback((id: number, elapsedMs: number) => {
+    updateLocalTask(id, { time: elapsedMs, started_at: null });
+  }, []);
+
+  const onReset = useCallback((id: number) => {
+    updateLocalTask(id, { time: 0, started_at: null });
+  }, []);
+
+  // Fetch tasks on mount
+  const fetchTasks = useCallback(() => {
+    const data = getAllLocal(); // <-- now calls getAllLocal directly
+    const sorted = data.sort((a, b) => a.position - b.position);
+    setStopwatchList(sorted.filter((t) => t.duration === 0));
+    setTimerList(sorted.filter((t) => t.duration > 0));
   }, []);
 
   useEffect(() => {
-    if (!session?.user) return;
+    fetchTasks();
+    setLoading(false);
+  }, [fetchTasks]);
 
-    const channel = supabase.channel("tasks-channel");
-    channel
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "tasks",
-          filter: `email=eq.${session.user.email}`,
-        },
-        (payload) => {
-          const newTask = payload.new as Task;
-          if (newTask.duration === 0) {
-            setStopwatchList((prev) => [...prev, newTask]);
-          } else {
-            setTimerList((prev) => [...prev, newTask]);
-          }
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "tasks",
-          filter: `email=eq.${session.user.email}`,
-        },
-        (payload) => {
-          const oldTask = payload.old;
+  // CRUD operations (optimistic)
+  const addTask = (taskData: {
+    title: string;
+    duration: number;
+    time?: number;
+  }) => {
+    const newTask = addLocalTask({
+      title: taskData.title,
+      duration: taskData.duration,
+      time: taskData.time ?? 0,
+      created_at: new Date().toISOString(),
+      started_at: null,
+      description: "",
+    });
 
-          setStopwatchList((prev) => prev.filter((el) => el.id !== oldTask.id));
-          setTimerList((prev) => prev.filter((el) => el.id !== oldTask.id));
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "tasks",
-          filter: `email=eq.${session.user.email}`,
-        },
-        (payload) => {
-          const updatedNote = payload.new as Task;
-
-          if (updatedNote.duration === 0) {
-            setStopwatchList((prev) =>
-              prev.map((task) =>
-                task.id === updatedNote.id ? updatedNote : task,
-              ),
-            );
-          } else {
-            setTimerList((prev) =>
-              prev.map((task) =>
-                task.id === updatedNote.id ? updatedNote : task,
-              ),
-            );
-          }
-        },
-      )
-      .subscribe((status) => {
-        console.log("Subscription: ", status);
-      });
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [session?.access_token]);
-
-  const fetchTasks = async () => {
-    const { data, error } = await supabase
-      .from("tasks")
-      .select("*")
-      .order("position", { ascending: true });
-
-    if (error) {
-      console.error("Error while fetching tasks: ", error.message);
-      return;
+    if (taskData.duration === 0) {
+      setStopwatchList((prev) => [...prev, newTask]);
+    } else {
+      setTimerList((prev) => [...prev, newTask]);
     }
-
-    setStopwatchList(data.filter((task) => task.duration === 0));
-    setTimerList(data.filter((task) => task.duration > 0));
   };
 
-  const deleteTask = async (duration: number, id: number) => {
-    const isStopwatch = duration === 0;
+  const editTask = (id: number, changes: Partial<LocalTask>) => {
+    updateLocalTask(id, changes);
+    setStopwatchList((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...changes } : t)),
+    );
+    setTimerList((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...changes } : t)),
+    );
+  };
 
-    // Optimistic UI removal
-    if (isStopwatch) {
+  const deleteTask = (duration: number, id: number) => {
+    if (duration === 0) {
       setStopwatchList((prev) => prev.filter((t) => t.id !== id));
     } else {
       setTimerList((prev) => prev.filter((t) => t.id !== id));
     }
-
-    // Server delete
-    const { error } = await supabase.from("tasks").delete().eq("id", id);
-
-    if (error) {
-      console.error("Delete failed: ", error);
-    }
+    deleteLocalTask(id);
   };
 
-  const handleDragEnd = async (e: any, isStopwatch: boolean) => {
+  const handleDragEnd = (e: any, isStopwatch: boolean) => {
     const { active, over } = e;
     if (active.id === over.id) return;
 
-    try {
-      if (isStopwatch) {
-        setStopwatchList((tasks) => {
-          const originalPos = tasks.findIndex((task) => task.id === active.id);
-          const newPos = tasks.findIndex((task) => task.id === over.id);
-          return arrayMove(tasks, originalPos, newPos);
-        });
-      } else {
-        setTimerList((tasks) => {
-          const originalPos = tasks.findIndex((task) => task.id === active.id);
-          const newPos = tasks.findIndex((task) => task.id === over.id);
-          return arrayMove(tasks, originalPos, newPos);
-        });
-      }
-
-      const { error } = await supabase.rpc("swap_task_positions", {
-        task_id_1: active.id,
-        task_id_2: over.id,
+    if (isStopwatch) {
+      setStopwatchList((tasks) => {
+        const originalPos = tasks.findIndex((t) => t.id === active.id);
+        const newPos = tasks.findIndex((t) => t.id === over.id);
+        return arrayMove(tasks, originalPos, newPos);
       });
-
-      if (error) {
-        console.error("Swap failed:", error);
-      }
-    } catch (error) {
-      console.error("Error in handleDragEnd:", error);
+    } else {
+      setTimerList((tasks) => {
+        const originalPos = tasks.findIndex((t) => t.id === active.id);
+        const newPos = tasks.findIndex((t) => t.id === over.id);
+        return arrayMove(tasks, originalPos, newPos);
+      });
     }
+
+    swapLocalPositions(active.id, over.id);
   };
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(TouchSensor),
@@ -212,14 +234,31 @@ export default function StopwatchSystem({ session }: { session: Session }) {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
   return (
     <>
       <Modal open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
-        {isTimer ? <AddTimer /> : <AddStopwatch isAdding={true} />}
+        {isTimer ? (
+          <AddTimer
+            onAdd={(taskData) => {
+              addTask(taskData);
+              setIsDialogOpen(false);
+            }}
+          />
+        ) : (
+          <AddStopwatch
+            isAdding={true}
+            onAdd={(taskData) => {
+              addTask(taskData);
+              setIsDialogOpen(false);
+            }}
+          />
+        )}
       </Modal>
+
       <div className="mt-2 flex flex-col lg:flex-row justify-around gap-10 lg:gap-0 text-font **:border-black">
+        {/* Stopwatches column */}
         <div className="flex flex-col items-center">
-          {/* Stopwatches */}
           <h2 className="text-center text-4xl mb-2">My Stopwatches</h2>
           <button
             className="bg-primary w-sm rounded mb-4 text-3xl py-5 tracking-widest border shadow-xl/20 transition hover:-translate-y-0.5"
@@ -230,6 +269,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
           >
             Add Stopwatch
           </button>
+
           <DndContext
             sensors={sensors}
             onDragEnd={(e) => handleDragEnd(e, true)}
@@ -245,7 +285,16 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                     <StopwatchSkeletonList count={3} />
                   ) : (
                     stopwatchList.map((el) => (
-                      <TimeTask key={el.id} task={el} onDelete={deleteTask} />
+                      <TimeTask
+                        key={el.id}
+                        task={el}
+                        onDelete={deleteTask}
+                        loadTimeForTask={loadTimeForTask}
+                        onStart={onStart}
+                        onStop={onStop}
+                        onReset={onReset}
+                        onEdit={editTask}
+                      />
                     ))
                   )}
                 </AnimatePresence>
@@ -253,10 +302,10 @@ export default function StopwatchSystem({ session }: { session: Session }) {
             </div>
           </DndContext>
         </div>
-        <div className="flex flex-col items-center">
-          {/* Timers */}
-          <h2 className="text-center text-4xl mb-2">My Timers</h2>
 
+        {/* Timers column */}
+        <div className="flex flex-col items-center">
+          <h2 className="text-center text-4xl mb-2">My Timers</h2>
           <button
             className="bg-primary w-sm rounded mb-4 text-3xl py-5 tracking-widest border shadow-xl/20 transition hover:-translate-y-0.5"
             onClick={() => {
@@ -287,6 +336,11 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                         task={el}
                         soundEndName={endSound}
                         onDelete={deleteTask}
+                        loadTimeForTask={loadTimeForTask}
+                        onStart={onStart}
+                        onStop={onStop}
+                        onReset={onReset}
+                        onEdit={editTask}
                       />
                     ))
                   )}
@@ -300,23 +354,34 @@ export default function StopwatchSystem({ session }: { session: Session }) {
   );
 }
 
+// ============================================================
+// TimeTask component (synchronous persistence)
+// ============================================================
+
 function TimeTask({
   task,
   soundEndName,
   onDelete,
+  loadTimeForTask,
+  onStart,
+  onStop,
+  onReset,
+  onEdit,
 }: {
   task: Task;
   soundEndName?: string;
-  onDelete: Function;
+  onDelete: (duration: number, id: number) => void;
+  loadTimeForTask: (id: number) => { time: number; started_at: string | null };
+  onStart: (id: number, startedAtISO: string) => void;
+  onStop: (id: number, elapsedMs: number) => void;
+  onReset: (id: number) => void;
+  onEdit: (id: number, changes: Partial<LocalTask>) => void;
 }) {
   const { id, title, duration, time = 0 } = task;
 
-  // Modal
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
-  // Time variables
   const currentTimeRef = useRef<number>(time);
-
   const [isRunning, setIsRunning] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [, forceRender] = useState(0);
@@ -325,15 +390,13 @@ function TimeTask({
   const endTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
 
-  // Time Logic (Time is derived)
+  // Derived display time
   let displayTime = 0;
-
   if (isRunning && startTimeRef.current) {
     const elapsed =
       currentTimeRef.current + (Date.now() - startTimeRef.current);
-
     if (duration && elapsed >= duration) {
-      displayTime = elapsed - duration; // Overtime
+      displayTime = elapsed - duration;
     } else {
       displayTime = elapsed;
     }
@@ -346,7 +409,6 @@ function TimeTask({
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id });
 
-  // Dragging Properties
   const style = {
     transition,
     transform: transform
@@ -359,10 +421,9 @@ function TimeTask({
       : undefined,
   };
 
-  // Notification System
+  // Notifications (async, but that's fine)
   const requestNotificationPermission = async () => {
     if (!("Notification" in window)) return;
-
     if (Notification.permission === "default") {
       await Notification.requestPermission();
     }
@@ -370,7 +431,6 @@ function TimeTask({
 
   const showNotification = async () => {
     if (Notification.permission !== "granted") return;
-
     const reg = await navigator.serviceWorker.ready;
     reg.active?.postMessage({
       type: "TIMER_DONE",
@@ -381,7 +441,6 @@ function TimeTask({
 
   const closeNotification = async () => {
     if (!("serviceWorker" in navigator)) return;
-
     const reg = await navigator.serviceWorker.ready;
     reg.active?.postMessage({
       type: "CLOSE_TIMER_NOTIFICATION",
@@ -389,84 +448,50 @@ function TimeTask({
     });
   };
 
+  // Custom events
   useEffect(() => {
-    const onReset = (e: any) => {
-      if (e.detail.taskId === id) {
-        reset();
-      }
+    const onResetEvent = (e: any) => {
+      if (e.detail.taskId === id) reset();
     };
-
-    const onRestart = (e: any) => {
-      if (e.detail.taskId === id) {
-        restart();
-      }
+    const onRestartEvent = (e: any) => {
+      if (e.detail.taskId === id) restart();
     };
-
-    window.addEventListener("timer-reset", onReset);
-    window.addEventListener("timer-restart", onRestart);
+    window.addEventListener("timer-reset", onResetEvent);
+    window.addEventListener("timer-restart", onRestartEvent);
     return () => {
-      window.removeEventListener("timer-reset", onReset);
-      window.removeEventListener("timer-restart", onRestart);
+      window.removeEventListener("timer-reset", onResetEvent);
+      window.removeEventListener("timer-restart", onRestartEvent);
     };
   }, [id]);
 
-  // Loading Time and the date of starting (if exists)
+  // Load persisted time and running state
   useEffect(() => {
-    const load = async () => {
-      const { error, data } = await supabase
-        .from("tasks")
-        .select("time, started_at")
-        .eq("id", id)
-        .single();
-
-      if (error) {
-        console.error("Whoops! While fetching: ", error.message);
-        return;
-      }
-
-      currentTimeRef.current = data.time;
-
-      if (data.started_at) {
-        startTimeRef.current = new Date(data.started_at).getTime();
-        setIsRunning(true);
-      }
-
-      if (data.started_at && duration) {
-        const started = new Date(data.started_at).getTime();
-        const elapsed = Date.now() - started;
-        const total = data.time + elapsed;
-
-        // TIMER ALREADY FINISHED
-        if (total >= duration) {
+    const { time: savedTime, started_at } = loadTimeForTask(id);
+    currentTimeRef.current = savedTime;
+    if (started_at) {
+      const startedMs = new Date(started_at).getTime();
+      startTimeRef.current = startedMs;
+      setIsRunning(true);
+      if (duration) {
+        const end = startedMs + (duration - savedTime);
+        endTimeRef.current = end;
+        if (Date.now() >= end) {
           setIsFinished(true);
-          if (document.visibilityState !== "visible") {
-            showNotification();
-          }
-
-          return;
+          if (document.visibilityState !== "visible") showNotification();
         }
-
-        // TIMER STILL RUNNING
-        startTimeRef.current = started;
-        endTimeRef.current = started + (duration - data.time);
-        setIsRunning(true);
       }
-    };
+    }
+    forceRender((t) => t + 1);
+  }, [id, loadTimeForTask, duration]);
 
-    load();
-  }, [id]);
-
-  // Rerendering Logic
+  // Re‑render loop
   useEffect(() => {
     if (!isRunning) return;
-
     const tick = () => {
       forceRender((t) => t + 1);
       rafRef.current = requestAnimationFrame(tick);
     };
-
     rafRef.current = requestAnimationFrame(tick);
-
     return () => {
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);
@@ -475,32 +500,23 @@ function TimeTask({
     };
   }, [isRunning]);
 
-  // Timer Logic
+  // Timer finish
   useEffect(() => {
     if (!duration || !isRunning || !endTimeRef.current) return;
-
     const remaining = endTimeRef.current - Date.now();
     if (remaining <= 0) {
       setIsFinished(true);
       soundEnd.play();
-      if (document.visibilityState !== "visible") {
-        showNotification();
-      }
+      if (document.visibilityState !== "visible") showNotification();
       document.title = "⏰ Time's up!";
+      return;
     }
-
     const timeout = setTimeout(() => {
       setIsFinished(true);
-
       soundEnd.play();
-
-      if (document.visibilityState !== "visible") {
-        showNotification();
-      }
-
+      if (document.visibilityState !== "visible") showNotification();
       document.title = "⏰ Time's up!";
     }, remaining);
-
     return () => clearTimeout(timeout);
   }, [isRunning, duration]);
 
@@ -508,91 +524,61 @@ function TimeTask({
     return () => soundEnd.stop();
   }, []);
 
+  // ---------- Control functions ----------
+
+  const start = () => {
+    const now = Date.now();
+    startTimeRef.current = now;
+    endTimeRef.current = duration
+      ? now + (duration - currentTimeRef.current)
+      : null;
+    setIsRunning(true);
+    onStart(id, new Date(now).toISOString());
+  };
+
+  const stop = () => {
+    if (!startTimeRef.current) return;
+    const elapsed =
+      currentTimeRef.current + (Date.now() - startTimeRef.current);
+    startTimeRef.current = null;
+    endTimeRef.current = null;
+    currentTimeRef.current = elapsed;
+    setIsRunning(false);
+    onStop(id, elapsed);
+  };
+
+  const reset = () => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    currentTimeRef.current = 0;
+    startTimeRef.current = null;
+    endTimeRef.current = null;
+    setIsRunning(false);
+    setIsFinished(false);
+    forceRender((t) => t + 1);
+
+    soundEnd.stop();
+    document.title = "Stopwatches";
+    closeNotification(); // fire‑and‑forget
+    onReset(id);
+  };
+
+  const restart = () => {
+    reset();
+    start();
+  };
+
   const startStop = async () => {
     if (isFinished) {
       restart();
       return;
     }
-
-    if (isRunning) await stop();
-    else await start();
-
+    if (isRunning) stop();
+    else start();
     await closeNotification();
     await requestNotificationPermission();
-  };
-
-  const start = async () => {
-    const now = Date.now();
-
-    startTimeRef.current = now;
-    endTimeRef.current = duration
-      ? now + (duration - currentTimeRef.current)
-      : null;
-
-    setIsRunning(true);
-
-    await supabase
-      .from("tasks")
-      .update({ started_at: new Date(now).toISOString() })
-      .eq("id", id);
-  };
-
-  const stop = async () => {
-    if (!startTimeRef.current) return;
-
-    const elapsed =
-      currentTimeRef.current + (Date.now() - startTimeRef.current);
-
-    startTimeRef.current = null;
-    endTimeRef.current = null;
-
-    currentTimeRef.current = elapsed;
-    setIsRunning(false);
-
-    await supabase
-      .from("tasks")
-      .update({
-        time: elapsed,
-        started_at: null,
-      })
-      .eq("id", id);
-  };
-
-  const restart = async () => {
-    await reset();
-    await start();
-  };
-
-  const reset = async () => {
-    currentTimeRef.current = 0;
-    forceRender((t) => t + 1);
-
-    if (rafRef.current !== null) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-
-    startTimeRef.current = null;
-    setIsRunning(false);
-
-    soundEnd.stop();
-    document.title = "Stopwatches"; // Possible to use a variable for this, in case I'd want to change the website's name
-    setIsFinished(false);
-
-    await closeNotification();
-
-    const { error } = await supabase
-      .from("tasks")
-      .update({
-        time: 0,
-        started_at: null,
-      })
-      .eq("id", id);
-
-    if (error) {
-      console.log("Whoops! Couldn't reset time: ", error.message);
-      return;
-    }
   };
 
   const formatTime = (timeInMs: number) => {
@@ -603,7 +589,6 @@ function TimeTask({
     const minutes = Math.floor((timeInMs % 3600000) / 60000);
     const seconds = Math.floor((timeInMs % 60000) / 1000);
     const milliseconds = Math.floor((timeInMs % 1000) / 10);
-
     return `${hours.toString().padStart(2, "0")}:${minutes
       .toString()
       .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}.${milliseconds
@@ -611,12 +596,12 @@ function TimeTask({
       .padStart(2, "0")}`;
   };
 
-  // HOTKEYS
+  // Hotkeys
   const HotkeySwitchRef = useHotkeys<HTMLParagraphElement>("s", (e) => {
     e.preventDefault();
     if (e.repeat) return;
     if (isFinished) restart();
-    isRunning ? stop() : start();
+    else isRunning ? stop() : start();
   });
 
   const HotkeyResetRef = useHotkeys<HTMLParagraphElement>("r", (e) => {
@@ -625,7 +610,6 @@ function TimeTask({
     reset();
   });
 
-  // Reset all stopwatches
   useHotkeys<HTMLParagraphElement>("ctrl + r", (e) => {
     e.preventDefault();
     if (e.repeat) return;
@@ -633,20 +617,49 @@ function TimeTask({
   });
 
   const mergedRef = useMergeRefs(setNodeRef, HotkeySwitchRef, HotkeyResetRef);
+
+  // Edit modal
+  const openEditModal = () => setIsDialogOpen(true);
+  const closeEditModal = () => setIsDialogOpen(false);
+
+  const handleEditStopwatch = (
+    id: number,
+    changes: { title: string; time: number },
+  ) => {
+    onEdit(id, changes);
+    closeEditModal();
+  };
+
+  const handleEditTimer = (
+    id: number,
+    changes: { title: string; duration: number },
+  ) => {
+    onEdit(id, changes);
+    closeEditModal();
+  };
+
   return (
     <>
-      <Modal open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
+      <Modal open={isDialogOpen} onClose={closeEditModal}>
         {duration > 0 ? (
-          <AddTimer />
+          <AddTimer
+            isEditing
+            id={id}
+            oldTitle={title}
+            oldDuration={duration}
+            onEdit={handleEditTimer}
+          />
         ) : (
           <AddStopwatch
             isAdding={false}
+            id={id}
             oldTitle={title}
             oldTime={currentTimeRef.current}
-            id={id}
+            onEdit={handleEditStopwatch}
           />
         )}
       </Modal>
+
       <div ref={mergedRef} style={style}>
         <motion.div
           initial={{ opacity: 0.9, scale: 0.9, marginBottom: 16 }}
@@ -676,16 +689,14 @@ function TimeTask({
             <div className="absolute right-0 z-1">
               <div className="flex">
                 <button
-                  onClick={() => {
-                    setIsDialogOpen(true);
-                  }}
+                  onClick={openEditModal}
                   className="text-amber-600 hover:text-amber-800 transition"
                 >
                   <TiPencil size={25} />
                 </button>
                 <button
                   onClick={() => onDelete(duration, id)}
-                  className="text-delete hover:text-red-800 transition "
+                  className="text-delete hover:text-red-800 transition"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -718,7 +729,6 @@ function TimeTask({
               <div>{formatTime(displayTime)}</div>
             )}
 
-            {/* Handle for dragging */}
             <div
               {...listeners}
               {...attributes}
@@ -727,6 +737,7 @@ function TimeTask({
               <RxDragHandleDots2 size={25} />
             </div>
           </div>
+
           <div className="relative flex justify-between gap-3 text-3xl">
             <button
               onClick={startStop}
