@@ -62,6 +62,8 @@ export const Auth = () => {
         return;
       }
     }
+
+    window.location.href = "/";
   };
 
   const handleForgotPassword = async () => {

@@ -85,10 +85,15 @@ export default function StopwatchSystem({ session }: { session: Session }) {
         },
         (payload) => {
           const newTask = payload.new as Task;
+
           if (newTask.duration === 0) {
-            setStopwatchList((prev) => [...prev, newTask]);
+            setStopwatchList((prev) =>
+              prev.some((t) => t.id === newTask.id) ? prev : [...prev, newTask],
+            );
           } else {
-            setTimerList((prev) => [...prev, newTask]);
+            setTimerList((prev) =>
+              prev.some((t) => t.id === newTask.id) ? prev : [...prev, newTask],
+            );
           }
         },
       )
@@ -212,10 +217,92 @@ export default function StopwatchSystem({ session }: { session: Session }) {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
+  // IMPORT / EXPORT DATA
+
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = async () => {
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("title, time, duration, position")
+      .eq("email", session.user.email)
+      .order("position", { ascending: true });
+
+    if (error) {
+      console.error("Export failed: ", error.message);
+      return;
+    }
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `stopwatch-timer-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (
+      !confirm(
+        "This will replace ALL your current stopwatches and timers. Continue?",
+      )
+    ) {
+      e.target.value = "";
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      const importedTasks = JSON.parse(text) as Task[];
+
+      // Validate structure
+      if (!Array.isArray(importedTasks)) throw new Error("Invalid format");
+
+      // Delete all current tasks for this user
+      await supabase.from("tasks").delete().eq("email", session.user.email);
+
+      // Insert imported tasks (let database generate new IDs/positions if needed)
+      const tasksToInsert = importedTasks.map(
+        ({ id, created_at, ...task }) => ({
+          ...task,
+          email: session.user.email, // enforce ownership
+          position: task.position ?? 0,
+          time: task.time ?? 0,
+          started_at: null, // never import running state
+        }),
+      );
+
+      const { error } = await supabase.from("tasks").insert(tasksToInsert);
+      if (error) throw error;
+
+      // Refresh lists
+      await fetchTasks();
+      alert("Import successful!");
+    } catch (err: any) {
+      console.error("Import failed: ", err);
+      alert("Import failed: " + err.message);
+    } finally {
+      setIsImporting(false);
+      e.target.value = "";
+    }
+  };
   return (
     <>
       <Modal open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
-        {isTimer ? <AddTimer /> : <AddStopwatch isAdding={true} />}
+        {isTimer ? (
+          <AddTimer isAdding={true} />
+        ) : (
+          <AddStopwatch isAdding={true} />
+        )}
       </Modal>
       <div className="mt-2 flex flex-col lg:flex-row justify-around gap-10 lg:gap-0 text-font **:border-black">
         <div className="flex flex-col items-center">
@@ -295,6 +382,24 @@ export default function StopwatchSystem({ session }: { session: Session }) {
             </div>
           </DndContext>
         </div>
+      </div>
+      <div className="mt-[80vh] flex justify-center items-center gap-2 text-font">
+        <button
+          className="hover:text-gray-400 transition"
+          onClick={handleExport}
+        >
+          Export data
+        </button>
+        <label className="cursor-pointer hover:text-gray-400 transition">
+          {isImporting ? "Importing…" : "Import data"}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleImport}
+            hidden
+          />
+        </label>
       </div>
     </>
   );
@@ -521,6 +626,13 @@ function TimeTask({
     await requestNotificationPermission();
   };
 
+  // Keep the ref in sync with the prop when the timer is stopped
+  useEffect(() => {
+    currentTimeRef.current = time;
+    // force a re‑render to reflect the change immediately
+    forceRender((t) => t + 1);
+  }, [time]);
+
   const start = async () => {
     const now = Date.now();
 
@@ -637,7 +749,12 @@ function TimeTask({
     <>
       <Modal open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
         {duration > 0 ? (
-          <AddTimer />
+          <AddTimer
+            isAdding={false}
+            oldTitle={title}
+            oldDuration={duration}
+            id={id}
+          />
         ) : (
           <AddStopwatch
             isAdding={false}

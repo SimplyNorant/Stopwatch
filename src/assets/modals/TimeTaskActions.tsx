@@ -6,6 +6,7 @@ import { useSharedContext } from "../../assets/SharedContent";
 interface EditProps {
   oldTitle?: string;
   oldTime?: number;
+  oldDuration?: number;
   isAdding: boolean;
   id?: number;
 }
@@ -45,17 +46,15 @@ export function AddStopwatch({
   };
 
   const editStopwatch = async (e: any) => {
-    // setNotes((prev) => prev.filter((t) => t.id !== id));
     e.preventDefault();
 
-    // Server delete
     const { error } = await supabase
       .from("tasks")
       .update({ title: title, time: time })
       .eq("id", id);
 
     if (error) {
-      console.error("Delete failed: ", error);
+      console.error("Edit failed: ", error);
     }
   };
 
@@ -136,12 +135,17 @@ export function AddStopwatch({
   );
 }
 
-export function AddTimer() {
+export function AddTimer({
+  oldTitle = "",
+  oldDuration = 0,
+  isAdding,
+  id,
+}: EditProps) {
   const { session } = useSharedContext();
 
   // TIMER
-  const [timerInput, setTimerInput] = useState<string>("");
-  const [timerDuration, setTimerDuration] = useState(0);
+  const [title, setTitle] = useState<string>(oldTitle);
+  const [timerDuration, setTimerDuration] = useState(oldDuration);
   const [endSound, setEndSound] = useState("timer_finish_ringing1.mp3");
 
   // TIMER DURATION
@@ -156,7 +160,7 @@ export function AddTimer() {
     const { error } = await supabase
       .from("tasks")
       .insert({
-        title: timerInput,
+        title: title,
         email: session.user.email,
         duration: duration,
       })
@@ -168,6 +172,19 @@ export function AddTimer() {
     }
   };
 
+  const editTimer = async (e: any) => {
+    e.preventDefault();
+
+    const { error } = await supabase
+      .from("tasks")
+      .update({ title: title, duration: timerDuration })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Edit failed: ", error);
+    }
+  };
+
   return (
     <>
       <form className="text-center flex flex-col">
@@ -175,8 +192,8 @@ export function AddTimer() {
           Timer Name:
         </label>
         <textarea
-          value={timerInput}
-          onInput={(e: any) => setTimerInput(e.target.value)}
+          value={title}
+          onInput={(e: any) => setTitle(e.target.value)}
           id="tname"
           name="tname"
           className="py-5 text-3xl text-center text-wrap border-2 bg-foreground"
@@ -246,10 +263,18 @@ export function AddTimer() {
           </select>
         </div>
         <button
-          className="w-70 py-2 mt-3 mx-auto bg-primary text-2xl border rounded tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
-          onClick={(e: any) => addTimer(e)}
+          className="w-70 py-2 mt-3 mx-auto bg-primary text-2xl border rounded  tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
+          onClick={(e: any) => (isAdding ? addTimer(e) : editTimer(e))}
         >
-          Create Timer
+          {isAdding ? (
+            <p>
+              Create <br /> Timer
+            </p>
+          ) : (
+            <p>
+              Edit <br /> Timer
+            </p>
+          )}
         </button>
       </form>
     </>

@@ -5,14 +5,20 @@ type MenuItemType = {
   label: string;
   submenu?: MenuItemType[];
   func?: Function;
+  link?: string;
 };
 
 type Arguments = {
   userName: string;
+  userImg: string;
   logout: Function;
 };
 
-export default function ProfileButton({ userName, logout }: Arguments) {
+export default function ProfileButton({
+  userName,
+  userImg,
+  logout,
+}: Arguments) {
   const [open, setOpen] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState<number | null>(null);
   const submenuTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -34,7 +40,15 @@ export default function ProfileButton({ userName, logout }: Arguments) {
         { label: `Dark ${dark ? "✔" : ""}`, func: () => toggleDark(true) },
       ],
     },
-    { label: "Sign Out", func: logout },
+    userName !== "guest"
+      ? {
+          label: "Sign Out",
+          func: logout,
+        }
+      : {
+          label: "Sign In",
+          link: "/auth",
+        },
   ];
   // Auto-close on outside click
   useEffect(() => {
@@ -90,7 +104,10 @@ export default function ProfileButton({ userName, logout }: Arguments) {
         onClick={() => setOpen((v) => !v)}
         className="w-10 rounded-md focus:outline-none"
       >
-        <img src="images/placeholder_avatar.png" alt="user_avatar" />
+        <img
+          src={userImg ? userImg : "images/placeholder_avatar.png"}
+          alt="user_avatar"
+        />
       </button>
 
       <AnimatePresence>
@@ -111,7 +128,13 @@ export default function ProfileButton({ userName, logout }: Arguments) {
               >
                 <div
                   onClick={() => {
-                    item.func ? item.func() : setActiveSubmenu(index);
+                    if (item.func) {
+                      item.func();
+                    } else if (item.link) {
+                      window.location.href = item.link;
+                    } else if (item.submenu) {
+                      setActiveSubmenu(index);
+                    }
                   }}
                   className={`flex justify-between px-4 py-2 rounded-md text-font hover:bg-gray-100 dark:hover:bg-gray-500 cursor-pointer ${
                     focusedIndex === index ? "bg-gray-200" : ""

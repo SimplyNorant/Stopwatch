@@ -1,6 +1,4 @@
-// ============================================================
-// localStorage helpers – all synchronous
-// ============================================================
+// localStorage helpers
 
 interface LocalTask {
   id: number;
@@ -524,6 +522,12 @@ function TimeTask({
     return () => soundEnd.stop();
   }, []);
 
+  // Keep the ref in sync with the prop when the timer is stopped
+  useEffect(() => {
+    currentTimeRef.current = time;
+    // force a re‑render to reflect the change immediately
+    forceRender((t) => t + 1);
+  }, [time]);
   // ---------- Control functions ----------
 
   const start = () => {
