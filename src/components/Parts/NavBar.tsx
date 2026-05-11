@@ -6,8 +6,7 @@ export default function NavBar() {
   const { session, logout } = useSharedContext();
 
   const userName = session?.user.email || "guest";
-  const userImg = session.user.user_metadata;
-  console.log(userImg);
+  const userImg = session.user.user_metadata.avatar_url;
 
   return (
     <>
@@ -18,7 +17,7 @@ export default function NavBar() {
             📝 Notes
           </a>
         )}
-        <ProfileButton userName={userName} userImg={""} logout={logout} />
+        <ProfileButton userName={userName} userImg={userImg} logout={logout} />
       </div>
     </>
   );

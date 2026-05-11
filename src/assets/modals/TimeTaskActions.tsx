@@ -7,6 +7,7 @@ interface EditProps {
   oldTitle?: string;
   oldTime?: number;
   oldDuration?: number;
+  oldEndSound?: string;
   isAdding: boolean;
   id?: number;
 }
@@ -138,6 +139,7 @@ export function AddStopwatch({
 export function AddTimer({
   oldTitle = "",
   oldDuration = 0,
+  oldEndSound = "timer_finish_ringing1.mp3",
   isAdding,
   id,
 }: EditProps) {
@@ -146,7 +148,7 @@ export function AddTimer({
   // TIMER
   const [title, setTitle] = useState<string>(oldTitle);
   const [timerDuration, setTimerDuration] = useState(oldDuration);
-  const [endSound, setEndSound] = useState("timer_finish_ringing1.mp3");
+  const [endSound, setEndSound] = useState(oldEndSound);
 
   // TIMER DURATION
   const totalSeconds = Math.floor(timerDuration / 1000);
@@ -163,6 +165,7 @@ export function AddTimer({
         title: title,
         email: session.user.email,
         duration: duration,
+        endSound: endSound,
       })
       .single();
 

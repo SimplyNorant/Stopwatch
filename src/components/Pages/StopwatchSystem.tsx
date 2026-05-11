@@ -46,6 +46,7 @@ interface Task {
   position: number;
   time: number;
   started_at: string | null;
+  endSound: string | null;
 }
 
 export default function StopwatchSystem({ session }: { session: Session }) {
@@ -59,7 +60,6 @@ export default function StopwatchSystem({ session }: { session: Session }) {
 
   // TIMER
   const [timerList, setTimerList] = useState<Task[]>([]);
-  const endSound = "timer_finish_ringing1.mp3";
 
   useEffect(() => {
     const load = async () => {
@@ -369,12 +369,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
                     <StopwatchSkeletonList count={3} />
                   ) : (
                     timerList.map((el) => (
-                      <TimeTask
-                        key={el.id}
-                        task={el}
-                        soundEndName={endSound}
-                        onDelete={deleteTask}
-                      />
+                      <TimeTask key={el.id} task={el} onDelete={deleteTask} />
                     ))
                   )}
                 </AnimatePresence>
@@ -405,16 +400,14 @@ export default function StopwatchSystem({ session }: { session: Session }) {
   );
 }
 
-function TimeTask({
-  task,
-  soundEndName,
-  onDelete,
-}: {
-  task: Task;
-  soundEndName?: string;
-  onDelete: Function;
-}) {
-  const { id, title, duration, time = 0 } = task;
+function TimeTask({ task, onDelete }: { task: Task; onDelete: Function }) {
+  const {
+    id,
+    title,
+    duration,
+    time = 0,
+    endSound = "timer_finish_ringing1.mp3",
+  } = task;
 
   // Modal
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
@@ -446,7 +439,7 @@ function TimeTask({
     displayTime = currentTimeRef.current;
   }
 
-  const soundEnd = playSound(`audio/${soundEndName}`, 0.3);
+  const soundEnd = playSound(`audio/${endSound}`, 0.3);
 
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id });

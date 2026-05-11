@@ -107,6 +107,7 @@ export default function ProfileButton({
         <img
           src={userImg ? userImg : "images/placeholder_avatar.png"}
           alt="user_avatar"
+          className="rounded-full object-cover"
         />
       </button>
 
