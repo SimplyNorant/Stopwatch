@@ -1,7 +1,16 @@
 // HOOKS
 import { useState, useEffect, useRef } from "react";
+
+// --- LIBRARIES ---
+
+// Hotkeys
 import { useHotkeys } from "react-hotkeys-hook";
+
+// Animation
 import * as motion from "motion/react-client";
+import { AnimatePresence } from "motion/react";
+
+// Dragging
 import { useMergeRefs } from "../../assets/hooks/useMergeRefs";
 import {
   closestCorners,
@@ -21,6 +30,7 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+// ICONS
 import { RxDragHandleDots2 } from "react-icons/rx";
 import { TiPencil } from "react-icons/ti";
 
@@ -28,39 +38,45 @@ import { TiPencil } from "react-icons/ti";
 import supabase from "../../supabase-client";
 import type { Session } from "@supabase/supabase-js";
 
+// COMPONENTS
 import { playSound } from "../../actions";
+
 import { Modal } from "../../assets/modals/AddItemModal";
 
 import { AddStopwatch } from "../../assets/modals/TimeTaskActions";
 import { AddTimer } from "../../assets/modals/TimeTaskActions";
+
 import StopwatchSkeletonList from "../../assets/skeleton";
 
-import { AnimatePresence } from "motion/react";
-
+// Stopwatch/Timer
 interface Task {
   id: number;
   title: string;
   description: string;
   created_at: string;
-  duration: number;
+  duration: number; // To differentiate between Stopwatch (duration === 0) and Timer (duration !== 0)
   position: number;
   time: number;
   started_at: string | null;
-  endSound: string | null;
+  endSound: string | null; // For Timers
 }
 
+// The core of Stopwatches/Timers
 export default function StopwatchSystem({ session }: { session: Session }) {
+  // LOADING TASKS
   const [loading, setLoading] = useState(true);
+
   // STOPWATCH
   const [stopwatchList, setStopwatchList] = useState<Task[]>([]);
+
+  // TIMER
+  const [timerList, setTimerList] = useState<Task[]>([]);
 
   // MODAL
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isTimer, setIsTimer] = useState(false);
 
-  // TIMER
-  const [timerList, setTimerList] = useState<Task[]>([]);
-
+  // Getting Tasks from db
   useEffect(() => {
     const load = async () => {
       await fetchTasks();
@@ -70,6 +86,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
     load();
   }, []);
 
+  // Live subscription (changes on INSERT, UPDATE, DELETE)
   useEffect(() => {
     if (!session?.user) return;
 
@@ -146,6 +163,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
     };
   }, [session?.access_token]);
 
+  // Fetching Tasks from db
   const fetchTasks = async () => {
     const { data, error } = await supabase
       .from("tasks")
@@ -161,6 +179,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
     setTimerList(data.filter((task) => task.duration > 0));
   };
 
+  // Deleting with "Optimistic UI removal" then from db
   const deleteTask = async (duration: number, id: number) => {
     const isStopwatch = duration === 0;
 
@@ -179,6 +198,7 @@ export default function StopwatchSystem({ session }: { session: Session }) {
     }
   };
 
+  // <DRAGGING>
   const handleDragEnd = async (e: any, isStopwatch: boolean) => {
     const { active, over } = e;
     if (active.id === over.id) return;
@@ -217,9 +237,9 @@ export default function StopwatchSystem({ session }: { session: Session }) {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+  // </DRAGGING>
 
-  // IMPORT / EXPORT DATA
-
+  // <IMPORT / EXPORT DATA>
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -274,10 +294,10 @@ export default function StopwatchSystem({ session }: { session: Session }) {
       const tasksToInsert = importedTasks.map(
         ({ id, created_at, ...task }) => ({
           ...task,
-          email: session.user.email, // enforce ownership
+          email: session.user.email, // Enforce ownership
           position: task.position ?? 0,
           time: task.time ?? 0,
-          started_at: null, // never import running state
+          started_at: null, // Never import running state
         }),
       );
 
@@ -295,8 +315,11 @@ export default function StopwatchSystem({ session }: { session: Session }) {
       e.target.value = "";
     }
   };
+  // </IMPORT/EXPORT DATA>
+
   return (
     <>
+      {/* For adding/editing Tasks */}
       <Modal open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
         {isTimer ? (
           <AddTimer isAdding={true} />
@@ -409,19 +432,21 @@ function TimeTask({ task, onDelete }: { task: Task; onDelete: Function }) {
     endSound = "timer_finish_ringing1.mp3",
   } = task;
 
-  // Modal
+  // MODAL
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
-  // Time variables
+  // TIME VARIABLES
   const currentTimeRef = useRef<number>(time);
 
   const [isRunning, setIsRunning] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
-  const [, forceRender] = useState(0);
 
   const startTimeRef = useRef<null | number>(null);
   const endTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
+
+  // For display to work
+  const [, forceRender] = useState(0);
 
   // Time Logic (Time is derived)
   let displayTime = 0;
@@ -438,75 +463,6 @@ function TimeTask({ task, onDelete }: { task: Task; onDelete: Function }) {
   } else {
     displayTime = currentTimeRef.current;
   }
-
-  const soundEnd = playSound(`audio/${endSound}`, 0.3);
-
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id });
-
-  // Dragging Properties
-  const style = {
-    transition,
-    transform: transform
-      ? CSS.Transform.toString({
-          x: transform.x,
-          y: transform.y,
-          scaleX: 1,
-          scaleY: 1,
-        })
-      : undefined,
-  };
-
-  // Notification System
-  const requestNotificationPermission = async () => {
-    if (!("Notification" in window)) return;
-
-    if (Notification.permission === "default") {
-      await Notification.requestPermission();
-    }
-  };
-
-  const showNotification = async () => {
-    if (Notification.permission !== "granted") return;
-
-    const reg = await navigator.serviceWorker.ready;
-    reg.active?.postMessage({
-      type: "TIMER_DONE",
-      taskId: id,
-      name: title,
-    });
-  };
-
-  const closeNotification = async () => {
-    if (!("serviceWorker" in navigator)) return;
-
-    const reg = await navigator.serviceWorker.ready;
-    reg.active?.postMessage({
-      type: "CLOSE_TIMER_NOTIFICATION",
-      taskId: id,
-    });
-  };
-
-  useEffect(() => {
-    const onReset = (e: any) => {
-      if (e.detail.taskId === id) {
-        reset();
-      }
-    };
-
-    const onRestart = (e: any) => {
-      if (e.detail.taskId === id) {
-        restart();
-      }
-    };
-
-    window.addEventListener("timer-reset", onReset);
-    window.addEventListener("timer-restart", onRestart);
-    return () => {
-      window.removeEventListener("timer-reset", onReset);
-      window.removeEventListener("timer-restart", onRestart);
-    };
-  }, [id]);
 
   // Loading Time and the date of starting (if exists)
   useEffect(() => {
@@ -540,7 +496,6 @@ function TimeTask({ task, onDelete }: { task: Task; onDelete: Function }) {
           if (document.visibilityState !== "visible") {
             showNotification();
           }
-
           return;
         }
 
@@ -602,9 +557,88 @@ function TimeTask({ task, onDelete }: { task: Task; onDelete: Function }) {
     return () => clearTimeout(timeout);
   }, [isRunning, duration]);
 
+  // Keeping the ref in sync with the prop when the timer is stopped. Used for proper display changing after editing
+  useEffect(() => {
+    currentTimeRef.current = time;
+    // forcing a re‑render to reflect the change immediately
+    forceRender((t) => t + 1);
+  }, [time]);
+
+  // Sound for the end of the Timer
+  const soundEnd = playSound(`audio/${endSound}`, 0.3);
+
   useEffect(() => {
     return () => soundEnd.stop();
   }, []);
+
+  // Dragging Properties
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id });
+
+  const style = {
+    transition,
+    transform: transform
+      ? CSS.Transform.toString({
+          x: transform.x,
+          y: transform.y,
+          scaleX: 1,
+          scaleY: 1,
+        })
+      : undefined,
+  };
+
+  // <NOTIFICATION SYSTEM>
+  const requestNotificationPermission = async () => {
+    if (!("Notification" in window)) return;
+
+    if (Notification.permission === "default") {
+      await Notification.requestPermission();
+    }
+  };
+
+  const showNotification = async () => {
+    if (Notification.permission !== "granted") return;
+
+    const reg = await navigator.serviceWorker.ready;
+    reg.active?.postMessage({
+      type: "TIMER_DONE",
+      taskId: id,
+      name: title,
+    });
+  };
+
+  const closeNotification = async () => {
+    if (!("serviceWorker" in navigator)) return;
+
+    const reg = await navigator.serviceWorker.ready;
+    reg.active?.postMessage({
+      type: "CLOSE_TIMER_NOTIFICATION",
+      taskId: id,
+    });
+  };
+
+  // For the appearing window after the end of the Timer
+  useEffect(() => {
+    const onReset = (e: any) => {
+      if (e.detail.taskId === id) {
+        reset();
+      }
+    };
+
+    const onRestart = (e: any) => {
+      if (e.detail.taskId === id) {
+        restart();
+      }
+    };
+
+    window.addEventListener("timer-reset", onReset);
+    window.addEventListener("timer-restart", onRestart);
+    return () => {
+      window.removeEventListener("timer-reset", onReset);
+      window.removeEventListener("timer-restart", onRestart);
+    };
+  }, [id]);
+  // </NOTIFICATION SYSTEM>
 
   const startStop = async () => {
     if (isFinished) {
@@ -618,13 +652,6 @@ function TimeTask({ task, onDelete }: { task: Task; onDelete: Function }) {
     await closeNotification();
     await requestNotificationPermission();
   };
-
-  // Keep the ref in sync with the prop when the timer is stopped
-  useEffect(() => {
-    currentTimeRef.current = time;
-    // force a re‑render to reflect the change immediately
-    forceRender((t) => t + 1);
-  }, [time]);
 
   const start = async () => {
     const now = Date.now();
