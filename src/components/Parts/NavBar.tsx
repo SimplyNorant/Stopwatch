@@ -6,7 +6,8 @@ export default function NavBar() {
   const { session, logout } = useSharedContext();
 
   const userName = session?.user.email || "guest";
-  const userImg = session.user.user_metadata.avatar_url;
+  const userImg =
+    session?.user.user_metadata.avatar_url || "images/placeholder_avatar.png";
 
   return (
     <>

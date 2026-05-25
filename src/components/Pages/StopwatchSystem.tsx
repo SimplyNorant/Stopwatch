@@ -203,33 +203,34 @@ export default function StopwatchSystem({ session }: { session: Session }) {
     const { active, over } = e;
     if (active.id === over.id) return;
 
-    try {
-      if (isStopwatch) {
-        setStopwatchList((tasks) => {
-          const originalPos = tasks.findIndex((task) => task.id === active.id);
-          const newPos = tasks.findIndex((task) => task.id === over.id);
-          return arrayMove(tasks, originalPos, newPos);
-        });
-      } else {
-        setTimerList((tasks) => {
-          const originalPos = tasks.findIndex((task) => task.id === active.id);
-          const newPos = tasks.findIndex((task) => task.id === over.id);
-          return arrayMove(tasks, originalPos, newPos);
-        });
-      }
+    const currentList = isStopwatch ? stopwatchList : timerList;
+    const oldIndex = currentList.findIndex((task) => task.id === active.id);
+    const newIndex = currentList.findIndex((task) => task.id === over.id);
 
-      const { error } = await supabase.rpc("swap_task_positions", {
-        task_id_1: active.id,
-        task_id_2: over.id,
-      });
+    if (oldIndex === -1 || newIndex === -1) return;
 
-      if (error) {
-        console.error("Swap failed:", error);
-      }
-    } catch (error) {
-      console.error("Error in handleDragEnd:", error);
+    // New order: dragged item inserted at newIndex, others shifted
+    const reordered = arrayMove(currentList, oldIndex, newIndex);
+
+    // Optimistic local update
+    if (isStopwatch) {
+      setStopwatchList(reordered);
+    } else {
+      setTimerList(reordered);
+    }
+
+    // Persist the complete order (position = index in the array)
+    const orderedIds = reordered.map((task) => task.id);
+    const { error } = await supabase.rpc("update_task_positions", {
+      task_ids: orderedIds,
+    });
+
+    if (error) {
+      console.error("Reorder failed:", error);
+      // Optionally re-fetch to fix, or leave it (UI will correct on reload)
     }
   };
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(TouchSensor),
@@ -573,18 +574,22 @@ function TimeTask({ task, onDelete }: { task: Task; onDelete: Function }) {
 
   // Dragging Properties
   const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id });
+    useSortable({
+      id,
+      transition: {
+        duration: 400, // milliseconds
+        easing: "cubic-bezier(0.25, 1, 0.5, 1)", // smooth deceleration
+      },
+    });
 
   const style = {
     transition,
-    transform: transform
-      ? CSS.Transform.toString({
-          x: transform.x,
-          y: transform.y,
-          scaleX: 1,
-          scaleY: 1,
-        })
-      : undefined,
+    transform: CSS.Transform.toString({
+      x: transform?.x ?? 0,
+      y: transform?.y ?? 0,
+      scaleX: 1,
+      scaleY: 1,
+    }),
   };
 
   // <NOTIFICATION SYSTEM>
