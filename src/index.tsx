@@ -12,6 +12,7 @@ import { Auth } from "./components/Pages/Auth.tsx";
 
 import { SharedProvider } from "./assets/SharedContent.tsx";
 import DarkModeToggle from "./assets/darkModeToggle.tsx";
+import { CustomKanban } from "./assets/CustomKanban.tsx";
 
 const router = createBrowserRouter([
   { path: "/", element: <App />, errorElement: <ErrorPage /> },
@@ -29,6 +30,7 @@ const router = createBrowserRouter([
     ),
   },
   { path: "/notes", element: <NoteSystem /> },
+  { path: "/kanban", element: <CustomKanban /> },
   { path: "/PrivacyPolicy", element: <PrivacyPolicy /> },
   { path: "/reset-password", element: <ResetPassword /> },
   { path: "*", element: <NotFoundPage /> },

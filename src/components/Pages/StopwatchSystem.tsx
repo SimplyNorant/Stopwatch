@@ -872,11 +872,9 @@ function TimeTask({ task, onDelete }: { task: Task; onDelete: Function }) {
           <div className="relative flex justify-between gap-3 text-3xl">
             <button
               onClick={startStop}
-              className={
-                isRunning
-                  ? "bg-delete w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
-                  : "bg-primary w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5"
-              }
+              className={`w-40 border rounded px-8 py-2 tracking-widest shadow-xl/10 transition hover:-translate-y-0.5 ${
+                isRunning ? "bg-delete" : "bg-primary"
+              }`}
             >
               {isRunning ? "Stop" : "Start"}
             </button>

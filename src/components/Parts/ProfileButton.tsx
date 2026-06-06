@@ -99,7 +99,7 @@ export default function ProfileButton({
   };
 
   return (
-    <div ref={containerRef} className="relative inline-block">
+    <div ref={containerRef} className="relative inline-block **:border-black">
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-10 rounded-md focus:outline-none"

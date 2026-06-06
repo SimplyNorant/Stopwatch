@@ -31,8 +31,8 @@ button {
 }
 
 .dark {
-  --background: #121215;
-  --foreground: hsl(0, 0%, 60%);
+  --background: #171717;
+  --foreground: #262626;
   --primary: hsl(113, 100%, 60%, 60%);
   --secondary: hsl(38, 100%, 60%, 60%);
   --font: #f7f7f8;
